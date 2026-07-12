@@ -137,6 +137,8 @@ public:
 	void _cdecl UserCmd_Close( void );
 	void _cdecl UserCmd_NextWeapon( void );
 	void _cdecl UserCmd_PrevWeapon( void );
+	/* GameCube lean HUD: clip count, or -1 if melee / no weapon. */
+	int GetLeanClip( void ) const { return m_pWeapon ? m_pWeapon->iClip : -1; }
 
 private:
 	float m_fFade;
@@ -389,13 +391,13 @@ public:
 	int VidInit( void );
 	int Draw( float flTime );
 	int MsgFunc_Battery( const char *pszName,  int iSize, void *pbuf );
-	
+	int m_iBat; /* public for GameCube lean HUD readback */
+
 private:
 	HSPRITE m_hSprite1;
 	HSPRITE m_hSprite2;
 	wrect_t *m_prc1;
 	wrect_t *m_prc2;
-	int m_iBat;
 	float m_fFade;
 	int m_iHeight;		// width of the battery innards
 };

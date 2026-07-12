@@ -244,12 +244,18 @@ int CHud::Redraw( float flTime, int intermission )
 			}
 			if( s_gcLeanHud2 )
 			{
-				wrect_t cross;
+				wrect_t cross, suit;
 				int hp = m_Health.m_iHealth;
+				int suit_val = m_Battery.m_iBat;
+				int clip = m_Ammo.GetLeanClip();
 				const int y = 4;
 
 				if( hp <= 0 )
 					hp = 100;
+				if( suit_val < 0 )
+					suit_val = 0;
+				if( suit_val > 999 )
+					suit_val = 999;
 				/* health cross icon at hud.txt: cross 0,72 16x16 — top-left */
 				cross.left = 0;
 				cross.top = 72;
@@ -258,6 +264,28 @@ int CHud::Redraw( float flTime, int intermission )
 				SPR_Set( s_gcLeanHud2, 255, 160, 0 );
 				SPR_DrawAdditive( 0, 4, y, &cross );
 				GC_LeanDrawHudNumber( s_gcLeanHud2, hp, 22, y, 255, 160, 0 );
+
+				/* suit_empty 20,52 20x20 — top-right with armor digits */
+				suit.left = 20;
+				suit.top = 52;
+				suit.right = 40;
+				suit.bottom = 72;
+				{
+					const int sx = ScreenWidth - 20 - 4 - 36;
+
+					SPR_Set( s_gcLeanHud2, 0, 160, 255 );
+					SPR_DrawAdditive( 0, sx, y, &suit );
+					GC_LeanDrawHudNumber( s_gcLeanHud2, suit_val, sx + 22, y + 2, 0, 160, 255 );
+				}
+
+				/* Ammo/clip digits bottom-right when weapon has a clip. */
+				if( clip >= 0 )
+				{
+					if( clip > 999 )
+						clip = 999;
+					GC_LeanDrawHudNumber( s_gcLeanHud2, clip,
+						ScreenWidth - 4 - 36, ScreenHeight - 4 - 16, 255, 160, 0 );
+				}
 			}
 			/* Once-flag lives on CHud — file/function statics re-spam on GC. */
 			if( m_iGcLeanHudLog == 0 )
@@ -265,9 +293,11 @@ int CHud::Redraw( float flTime, int intermission )
 				if( s_gcLeanPain || s_gcLeanTrain || s_gcLeanCross || s_gcLeanHud2 )
 				{
 					m_iGcLeanHudLog = 1;
-					gEngfuncs.Con_Printf( "Xash3D GameCube: lean HUD sprites drawn pain=%d train=%d cross=%d nums=%d\n",
+					gEngfuncs.Con_Printf( "Xash3D GameCube: lean HUD sprites drawn pain=%d train=%d cross=%d nums=%d suit=%d ammo=%d\n",
 						s_gcLeanPain ? 1 : 0, s_gcLeanTrain ? 1 : 0,
-						s_gcLeanCross ? 1 : 0, s_gcLeanHud2 ? 1 : 0 );
+						s_gcLeanCross ? 1 : 0, s_gcLeanHud2 ? 1 : 0,
+						s_gcLeanHud2 ? 1 : 0,
+						( s_gcLeanHud2 && m_Ammo.GetLeanClip() >= 0 ) ? 1 : 0 );
 				}
 				else
 				{
