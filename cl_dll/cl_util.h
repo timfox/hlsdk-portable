@@ -163,7 +163,7 @@ inline int GetSpriteRes( int width, int height )
 
 	if( width < 640 )
 		i = 320;
-	else if( width < 1280 || !gHUD.m_pAllowHD->value )
+	else if( width < 1280 || !gHUD.m_pAllowHD || !gHUD.m_pAllowHD->value )
 		i = 640;
 	else
 	{
@@ -175,7 +175,10 @@ inline int GetSpriteRes( int width, int height )
 			i = 2560;
 	}
 
-	return Q_min( i, gHUD.m_iMaxRes );
+	/* m_iMaxRes stays 0 until HUD_VidInit; do not clamp to 0_*.spr names. */
+	if( gHUD.m_iMaxRes > 0 )
+		i = Q_min( i, gHUD.m_iMaxRes );
+	return i;
 }
 
 void ScaleColors( int &r, int &g, int &b, int a );

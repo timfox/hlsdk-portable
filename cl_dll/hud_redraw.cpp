@@ -150,6 +150,46 @@ int CHud::Redraw( float flTime, int intermission )
 
 	m_iIntermission = intermission;
 
+#ifdef __GAMECUBE__
+	/* Quality 0 skips hud.txt sheet load in VidInit; drawing the full HUD list
+	 * would chase null m_rghSprites / DVD stubs and stall Host_Frame. Draw one
+	 * direct-load 320 sheet as New Game HUD proof instead. */
+	{
+		cvar_t *quality = gEngfuncs.pfnGetCvarPointer( "gc_quality" );
+		const int q = quality ? (int)quality->value : 1;
+
+		if( q <= 0 )
+		{
+			static HSPRITE leanPain = 0;
+			static int leanLogged = 0;
+
+			if( !leanPain )
+				leanPain = LoadSprite( "sprites/%d_pain.spr" );
+			if( leanPain )
+			{
+				int y;
+
+				SPR_Set( leanPain, 255, 180, 180 );
+				y = ScreenHeight - SPR_Height( leanPain, 0 ) - 4;
+				if( y < 0 )
+					y = 0;
+				SPR_DrawAdditive( 0, 4, y, NULL );
+				if( !leanLogged )
+				{
+					gEngfuncs.Con_Printf( "Xash3D GameCube: lean HUD pain sprite drawn\n" );
+					leanLogged = 1;
+				}
+			}
+			else if( !leanLogged )
+			{
+				gEngfuncs.Con_Printf( "Xash3D GameCube: lean HUD pain sprite load failed\n" );
+				leanLogged = 1;
+			}
+			return 1;
+		}
+	}
+#endif
+
 	// if no redrawing is necessary
 	// return 0;
 

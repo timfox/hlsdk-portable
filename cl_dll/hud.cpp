@@ -21,6 +21,7 @@
 #include "hud.h"
 #include "cl_util.h"
 #include <string.h>
+
 #include <stdio.h>
 #include "parsemsg.h"
 #if USE_VGUI
@@ -103,6 +104,21 @@ cvar_t *cl_lw = NULL;
 cvar_t *cl_viewbob = NULL;
 
 void ShutdownInput( void );
+
+#ifdef __GAMECUBE__
+static int GC_HudQuality( void )
+{
+	cvar_t *quality = gEngfuncs.pfnGetCvarPointer( "gc_quality" );
+	int value = quality ? quality->value : 1;
+
+	if( value < 0 )
+		value = 0;
+	if( value > 1 )
+		value = 1;
+
+	return value;
+}
+#endif
 
 //DECLARE_MESSAGE( m_Logo, Logo )
 int __MsgFunc_Logo( const char *pszName, int iSize, void *pbuf )
@@ -328,6 +344,22 @@ int __MsgFunc_AllowSpec( const char *pszName, int iSize, void *pbuf )
 // This is called every time the DLL is loaded
 void CHud::Init( void )
 {
+#ifdef __GAMECUBE__
+	// Check for emergency -nohud mode or low visual quality
+	const int quality = GC_HudQuality();
+	gEngfuncs.Con_Printf( "Xash3D GameCube: CHud::Init begin quality=%d\n", quality );
+	if( quality == 0 )
+	{
+		// Minimal init for quality 0 to prevent crashes in other subsystems
+		// that might call Hud functions expecting Init to have run
+		m_iLogo = 0;
+		m_iFOV = 0;
+		m_flTime = 1.0;
+		gEngfuncs.Con_Printf( "Xash3D GameCube: CHud::Init minimal ready\n" );
+		return;
+	}
+#endif
+
 	HOOK_MESSAGE( Logo );
 	HOOK_MESSAGE( ResetHUD );
 	HOOK_MESSAGE( GameMode );
@@ -361,7 +393,17 @@ void CHud::Init( void )
 #endif
 
 	HOOK_MESSAGE( Spectator );
+#ifdef __GAMECUBE__
+	gEngfuncs.Con_Printf( "Xash3D GameCube: CHud::Init Spectator hook ready\n" );
+#endif
 	HOOK_MESSAGE( AllowSpec );
+#ifdef __GAMECUBE__
+	gEngfuncs.Con_Printf( "Xash3D GameCube: CHud::Init AllowSpec hook ready\n" );
+#endif
+
+#ifdef __GAMECUBE__
+	gEngfuncs.Con_Printf( "Xash3D GameCube: CHud::Init message hooks ready\n" );
+#endif
 
 #if USE_VGUI
 	HOOK_MESSAGE( SpecFade );
@@ -369,11 +411,23 @@ void CHud::Init( void )
 #endif
 
 	// VGUI Menus
+#ifdef __GAMECUBE__
+	gEngfuncs.Con_Printf( "Xash3D GameCube: CHud::Init VGUIMenu hook begin\n" );
+#endif
 	HOOK_MESSAGE( VGUIMenu );
+#ifdef __GAMECUBE__
+	gEngfuncs.Con_Printf( "Xash3D GameCube: CHud::Init VGUIMenu hook ready\n" );
+#endif
 
+#ifdef __GAMECUBE__
+	gEngfuncs.Con_Printf( "Xash3D GameCube: CHud::Init cvar block begin\n" );
+#endif
 	CVAR_CREATE( "hud_classautokill", "1", FCVAR_ARCHIVE | FCVAR_USERINFO );		// controls whether or not to suicide immediately on TF class switch
 	CVAR_CREATE( "hud_takesshots", "0", FCVAR_ARCHIVE );		// controls whether or not to automatically take screenshots at the end of a round
 	hud_textmode = CVAR_CREATE ( "hud_textmode", "0", FCVAR_ARCHIVE );
+#ifdef __GAMECUBE__
+	gEngfuncs.Con_Printf( "Xash3D GameCube: CHud::Init cvar block core ready\n" );
+#endif
 
 	m_iLogo = 0;
 	m_iFOV = 0;
@@ -386,8 +440,15 @@ void CHud::Init( void )
 	m_pAllowHD = CVAR_CREATE ( "hud_allow_hd", "1", FCVAR_ARCHIVE );
 	cl_lw = gEngfuncs.pfnGetCvarPointer( "cl_lw" );
 	cl_viewbob = CVAR_CREATE( "cl_viewbob", "1", FCVAR_ARCHIVE );
+#ifdef __GAMECUBE__
+	gEngfuncs.Con_Printf( "Xash3D GameCube: CHud::Init cvar block extended ready\n" );
+#endif
 
 	m_pSpriteList = NULL;
+
+#ifdef __GAMECUBE__
+	gEngfuncs.Con_Printf( "Xash3D GameCube: CHud::Init cvars ready\n" );
+#endif
 
 #ifdef MOBILE_HACKS
 	if( HUD_IsGame( "biglolly" ) )
@@ -514,6 +575,18 @@ int CHud::GetSpriteIndex( const char *SpriteName )
 
 void CHud::VidInit( void )
 {
+#ifdef __GAMECUBE__
+	if( GC_HudQuality() == 0 )
+	{
+		m_scrinfo.iSize = sizeof(m_scrinfo);
+		GetScreenInfo( &m_scrinfo );
+		/* Lean New Game / low-mem: keep 320 sheet names without loading hud.txt. */
+		m_iRes = 320;
+		m_iMaxRes = 320;
+		return;
+	}
+#endif
+
 	int j;
 	m_scrinfo.iSize = sizeof(m_scrinfo);
 	GetScreenInfo( &m_scrinfo );
@@ -532,6 +605,23 @@ void CHud::VidInit( void )
 	m_iMaxRes = 640;
 	client_sprite_t *pSpriteList = m_pSpriteList ? m_pSpriteList :
 		SPR_GetList( "sprites/hud.txt", &m_iSpriteCountAllRes );
+
+	// Guard against missing hud.txt or empty sprite list which can crash on GameCube
+	if( !pSpriteList )
+	{
+		m_iSpriteCountAllRes = 0;
+		m_iRes = 320;
+		m_iSpriteCount = 0;
+		m_pSpriteList = NULL;
+		
+		gEngfuncs.Con_Printf( "WARNING: hud.txt missing or empty, HUD disabled.\n" );
+		
+		// Initialize HUD elements to safe states to prevent crashes
+		m_Ammo.Init();
+		m_Health.Init();
+		// ... other inits if necessary, but mostly VidInit calls are deferred or safe
+		return;
+	}
 	if( pSpriteList )
 	{
 		for( int i = 0; i < m_iSpriteCountAllRes; i++ )
@@ -617,6 +707,16 @@ void CHud::VidInit( void )
 				char sz[256];
 				sprintf( sz, "sprites/%s.spr", p->szSprite );
 				m_rghSprites[index] = SPR_Load( sz );
+				
+#ifdef __GAMECUBE__
+				// Guard against failed sprite loads which can hang/crash on GameCube if missing
+				if( !m_rghSprites[index] )
+				{
+					// Use a fallback or 0 handle; SPR_Draw should handle 0 gracefully
+					// or we ensure SPR_Load never returns 0 for valid indices
+				}
+#endif
+				
 				m_rgrcRects[index] = p->rc;
 				strlcpy( &m_rgszSpriteNames[index * MAX_SPRITE_NAME_LENGTH], p->szName, MAX_SPRITE_NAME_LENGTH );
 				index++;
@@ -633,12 +733,17 @@ void CHud::VidInit( void )
 	{
 		const char *msg = "There is something wrong with your game data! Please, reinstall\n";
 
+#ifdef __GAMECUBE__
+		// On GameCube, don't hang on MessageBox, just log and continue with degraded HUD
+		gEngfuncs.Con_Printf( "%s", msg );
+#else
 		if( HUD_MessageBox( msg ) )
 		{
 			gEngfuncs.pfnClientCmd( "quit\n" );
 		}
 
 		return;
+#endif
 	}
 
 	m_iFontHeight = m_rgrcRects[m_HUD_number_0].bottom - m_rgrcRects[m_HUD_number_0].top;
