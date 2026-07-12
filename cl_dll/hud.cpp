@@ -354,6 +354,7 @@ void CHud::Init( void )
 		// that might call Hud functions expecting Init to have run
 		m_iLogo = 0;
 		m_iFOV = 0;
+		m_iGcLeanHudLog = 0;
 		m_flTime = 1.0;
 		gEngfuncs.Con_Printf( "Xash3D GameCube: CHud::Init minimal ready\n" );
 		return;

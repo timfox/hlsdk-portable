@@ -543,6 +543,7 @@ private:
 	HUDLIST						*m_pHudList;
 	HSPRITE						m_hsprLogo;
 	int							m_iLogo;
+	int							m_iGcLeanHudLog; /* GameCube quality-0 HUD once-flag */
 	client_sprite_t				*m_pSpriteList;
 	int							m_iSpriteCount;
 	int							m_iSpriteCountAllRes;
@@ -660,6 +661,10 @@ public:
 	void AddHudElem( CHudBase *p );
 
 	float GetSensitivity();
+
+#ifdef __GAMECUBE__
+	int GC_GetHUDVisualQuality();
+#endif
 
 	void GetAllPlayersInfo( void );
 };
