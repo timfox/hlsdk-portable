@@ -161,7 +161,9 @@ int CHud::Redraw( float flTime, int intermission )
 		if( q <= 0 )
 		{
 			static HSPRITE leanPain = 0;
-			static int leanLogged = 0;
+			/* File-scope-ish once flag kept adjacent to avoid COMDAT BSS aliasing
+			 * with leanPain (observed as every-frame OSReport spam on GC). */
+			static int leanHudLogState = 0; /* 0=pending 1=ok 2=fail */
 
 			if( !leanPain )
 				leanPain = LoadSprite( "sprites/%d_pain.spr" );
@@ -174,16 +176,16 @@ int CHud::Redraw( float flTime, int intermission )
 				if( y < 0 )
 					y = 0;
 				SPR_DrawAdditive( 0, 4, y, NULL );
-				if( !leanLogged )
+				if( leanHudLogState == 0 )
 				{
 					gEngfuncs.Con_Printf( "Xash3D GameCube: lean HUD pain sprite drawn\n" );
-					leanLogged = 1;
+					leanHudLogState = 1;
 				}
 			}
-			else if( !leanLogged )
+			else if( leanHudLogState == 0 )
 			{
 				gEngfuncs.Con_Printf( "Xash3D GameCube: lean HUD pain sprite load failed\n" );
-				leanLogged = 1;
+				leanHudLogState = 2;
 			}
 			return 1;
 		}
