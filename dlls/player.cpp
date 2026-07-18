@@ -1785,6 +1785,11 @@ void CBasePlayer::UpdateStatusBar()
 	int newSBarState[SBAR_END] = {0};
 	char sbuf0[SBAR_STRING_SIZE];
 	char sbuf1[ SBAR_STRING_SIZE ];
+#if XASH_GAMECUBE
+	static int gcStatusTraceLog;
+	BOOL gcTraceStatus = g_engfuncs.CheckParm( (char *)"-gcfullphysics", NULL )
+		&& gcStatusTraceLog++ < 2;
+#endif
 
 	strcpy( sbuf0, m_SbarString0 );
 	strcpy( sbuf1, m_SbarString1 );
@@ -1794,7 +1799,15 @@ void CBasePlayer::UpdateStatusBar()
 	UTIL_MakeVectors( pev->v_angle + pev->punchangle );
 	Vector vecSrc = EyePosition();
 	Vector vecEnd = vecSrc + ( gpGlobals->v_forward * MAX_ID_RANGE );
+#if XASH_GAMECUBE
+	if( gcTraceStatus )
+		ALERT( at_aiconsole, "*GameCube: native HUD status trace begin\n" );
+#endif
 	UTIL_TraceLine( vecSrc, vecEnd, dont_ignore_monsters, edict(), &tr );
+#if XASH_GAMECUBE
+	if( gcTraceStatus )
+		ALERT( at_aiconsole, "*GameCube: native HUD status trace ready\n" );
+#endif
 
 	if( tr.flFraction != 1.0f )
 	{
@@ -4019,6 +4032,23 @@ reflecting all of the HUD state info.
 */
 void CBasePlayer::UpdateClientData( void )
 {
+#if XASH_GAMECUBE
+	BOOL gcTraceNativeHUD = m_fInitHUD && g_engfuncs.CheckParm( (char *)"-gcfullphysics", NULL );
+
+	/* New Game bring-up: full UpdateClientData (weapon/HUD msgs, status bar)
+	 * stalls Host_ServerFrame after G36. Clear init once, then no-op. */
+	if( g_engfuncs.CheckParm( (char *)"-gcnewgame", NULL )
+		&& !g_engfuncs.CheckParm( (char *)"-gcfullphysics", NULL ) )
+	{
+		if( m_fInitHUD )
+		{
+			m_fInitHUD = FALSE;
+			gInitHUD = FALSE;
+			ALERT( at_aiconsole, "*GameCube: skipped UpdateClientData for newgame\n" );
+		}
+		return;
+	}
+#endif
 	if( m_fInitHUD )
 	{
 		m_fInitHUD = FALSE;
@@ -4259,6 +4289,9 @@ void CBasePlayer::UpdateClientData( void )
 		UpdateStatusBar();
 		m_flNextSBarUpdateTime = gpGlobals->time + 0.2f;
 	}
+#if XASH_GAMECUBE
+	if( gcTraceNativeHUD ) ALERT( at_aiconsole, "*GameCube: native HUD client update ready\n" );
+#endif
 }
 
 //=========================================================

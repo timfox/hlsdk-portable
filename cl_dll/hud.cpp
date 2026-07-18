@@ -99,6 +99,22 @@ float g_hud_text_color[3];
 
 extern client_sprite_t *GetSpriteList( client_sprite_t *pList, const char *psz, int iRes, int iCount );
 
+#ifdef __GAMECUBE__
+int __MsgFunc_Geiger( const char *, int, void * );
+int __MsgFunc_Flashlight( const char *, int, void * );
+int __MsgFunc_FlashBat( const char *, int, void * );
+int __MsgFunc_Health( const char *, int, void * );
+int __MsgFunc_Damage( const char *, int, void * );
+int __MsgFunc_Battery( const char *, int, void * );
+int __MsgFunc_Train( const char *, int, void * );
+int __MsgFunc_CurWeapon( const char *, int, void * );
+int __MsgFunc_WeaponList( const char *, int, void * );
+int __MsgFunc_HideWeapon( const char *, int, void * );
+int __MsgFunc_AmmoX( const char *, int, void * );
+int __MsgFunc_StatusText( const char *, int, void * );
+int __MsgFunc_StatusValue( const char *, int, void * );
+#endif
+
 extern cvar_t *sensitivity;
 cvar_t *cl_lw = NULL;
 cvar_t *cl_viewbob = NULL;
@@ -351,8 +367,24 @@ void CHud::Init( void )
 	if( quality == 0 )
 	{
 		/* UpdateClientData still runs the original HUD Think path at quality 0.
-		 * Initialize every value it dereferences even though sprite-list and
-		 * individual HUD-element allocation remain disabled. */
+		 * Register original message wrappers and initialize every value it
+		 * dereferences without allocating sprite or HUD-element lists. */
+		HOOK_MESSAGE( ResetHUD );
+		HOOK_MESSAGE( InitHUD );
+		HOOK_MESSAGE( SetFOV );
+		HOOK_MESSAGE( Geiger );
+		HOOK_MESSAGE( Flashlight );
+		HOOK_MESSAGE( FlashBat );
+		HOOK_MESSAGE( Health );
+		HOOK_MESSAGE( Damage );
+		HOOK_MESSAGE( Battery );
+		HOOK_MESSAGE( Train );
+		HOOK_MESSAGE( CurWeapon );
+		HOOK_MESSAGE( WeaponList );
+		HOOK_MESSAGE( HideWeapon );
+		HOOK_MESSAGE( AmmoX );
+		HOOK_MESSAGE( StatusText );
+		HOOK_MESSAGE( StatusValue );
 		m_iLogo = 0;
 		CVAR_CREATE( "zoom_sensitivity_ratio", "1.2", FCVAR_ARCHIVE );
 		default_fov = CVAR_CREATE( "default_fov", "90", FCVAR_ARCHIVE );
