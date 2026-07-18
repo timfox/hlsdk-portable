@@ -350,10 +350,16 @@ void CHud::Init( void )
 	gEngfuncs.Con_Printf( "Xash3D GameCube: CHud::Init begin quality=%d\n", quality );
 	if( quality == 0 )
 	{
-		// Minimal init for quality 0 to prevent crashes in other subsystems
-		// that might call Hud functions expecting Init to have run
+		/* UpdateClientData still runs the original HUD Think path at quality 0.
+		 * Initialize every value it dereferences even though sprite-list and
+		 * individual HUD-element allocation remain disabled. */
 		m_iLogo = 0;
-		m_iFOV = 0;
+		CVAR_CREATE( "zoom_sensitivity_ratio", "1.2", FCVAR_ARCHIVE );
+		default_fov = CVAR_CREATE( "default_fov", "90", FCVAR_ARCHIVE );
+		m_iFOV = default_fov ? default_fov->value : 90;
+		m_flMouseSensitivity = 0;
+		m_iKeyBits = 0;
+		m_iWeaponBits = 0;
 		m_iGcLeanHudLog = 0;
 		m_flTime = 1.0;
 		gEngfuncs.Con_Printf( "Xash3D GameCube: CHud::Init minimal ready\n" );
