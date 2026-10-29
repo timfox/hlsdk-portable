@@ -155,6 +155,29 @@ void FindHullIntersection( const Vector &vecSrc, TraceResult &tr, float *mins, f
 
 void CCrowbar::PrimaryAttack()
 {
+#if defined(__GAMECUBE__)
+	/* Lean: FireBulletsPlayer → hull world-only pfnTraceLine (damage deferred). */
+	if( g_engfuncs.CheckParm( (char *)"-gcnewgame", NULL )
+		&& !g_engfuncs.CheckParm( (char *)"-gcfullphysics", NULL ))
+	{
+		static int gc_g120_crowbar_logged;
+		Vector vecSrc;
+
+		UTIL_MakeVectors( m_pPlayer->pev->v_angle );
+		vecSrc = m_pPlayer->pev->origin;
+		vecSrc.z += 28.0f;
+		m_pPlayer->FireBulletsPlayer( 1, vecSrc, gpGlobals->v_forward,
+			Vector( 0, 0, 0 ), 8192, BULLET_PLAYER_9MM, 0, 0,
+			m_pPlayer->pev, m_pPlayer->random_seed );
+		m_flNextPrimaryAttack = gpGlobals->time + 0.5f;
+		if( !gc_g120_crowbar_logged )
+		{
+			gc_g120_crowbar_logged = 1;
+			ALERT( at_console, "*GameCube: PrimaryAttack weapon=crowbar FireBullets\n" );
+		}
+		return;
+	}
+#endif
 	if( !Swing( 1 ) )
 	{
 #if !CLIENT_DLL

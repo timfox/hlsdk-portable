@@ -150,6 +150,24 @@ int DamageDecal( CBaseEntity *pEntity, int bitsDamageType )
 
 void DecalGunshot( TraceResult *pTrace, int iBulletType )
 {
+#if defined(__GAMECUBE__)
+	/* Lean: UTIL_GunshotDecalTrace / UTIL_DecalTrace hung Host_Frame
+	 * (TE_GUNSHOTDECAL / TE_DECAL). Engine G293 CL_DecalShoot is the
+	 * tip-safe presentation path; keep this marker for combat proof. */
+	if( g_engfuncs.CheckParm( (char *)"-gcnewgame", NULL )
+		&& !g_engfuncs.CheckParm( (char *)"-gcfullphysics", NULL ))
+	{
+		static int gc_decal_gunshot_logged;
+
+		(void)iBulletType;
+		if( !gc_decal_gunshot_logged )
+		{
+			gc_decal_gunshot_logged = 1;
+			ALERT( at_console, "*GameCube: lean DecalGunshot tip-safe (skip TE)\n" );
+		}
+		return;
+	}
+#endif
 	// Is the entity valid
 	if( !UTIL_IsValidEntity( pTrace->pHit ) )
 		return;

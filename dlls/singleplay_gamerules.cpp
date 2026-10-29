@@ -35,6 +35,18 @@ extern int gmsgMOTD;
 //=========================================================
 CHalfLifeRules::CHalfLifeRules( void )
 {
+#if defined(__GAMECUBE__)
+	/* G320: lean/map probes — avoid disc exec of spserver.cfg (hung on c3a2*). */
+	if( g_engfuncs.CheckParm( (char *)"-gcnewgame", NULL )
+		|| g_engfuncs.CheckParm( (char *)"-gcmap", NULL ))
+	{
+		SERVER_COMMAND( "pausable 1\n" );
+		SERVER_COMMAND( "sv_maxspeed 320\n" );
+		SERVER_COMMAND( "sv_allow_autoaim 1\n" );
+		SERVER_COMMAND( "sv_allow_shaders 1\n" );
+	}
+	else
+#endif
 	SERVER_COMMAND( "exec spserver.cfg\n" );
 	RefreshSkillData();
 }

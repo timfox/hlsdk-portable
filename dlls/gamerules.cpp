@@ -62,7 +62,13 @@ BOOL CGameRules::CanHaveAmmo( CBasePlayer *pPlayer, const char *pszAmmoName, int
 //=========================================================
 edict_t *CGameRules::GetPlayerSpawnSpot( CBasePlayer *pPlayer )
 {
+	#if defined(__GAMECUBE__)
+	ALERT( at_console, "*GameCube: CGameRules::GetPlayerSpawnSpot stage=select begin\n" );
+	#endif
 	edict_t *pentSpawnSpot = EntSelectSpawnPoint( pPlayer );
+	#if defined(__GAMECUBE__)
+	ALERT( at_console, "*GameCube: CGameRules::GetPlayerSpawnSpot stage=select ready\n" );
+	#endif
 
 	pPlayer->pev->origin = VARS( pentSpawnSpot )->origin + Vector( 0, 0, 1 );
 	pPlayer->pev->v_angle  = g_vecZero;
@@ -70,6 +76,9 @@ edict_t *CGameRules::GetPlayerSpawnSpot( CBasePlayer *pPlayer )
 	pPlayer->pev->angles = VARS( pentSpawnSpot )->angles;
 	pPlayer->pev->punchangle = g_vecZero;
 	pPlayer->pev->fixangle = TRUE;
+	#if defined(__GAMECUBE__)
+	ALERT( at_console, "*GameCube: CGameRules::GetPlayerSpawnSpot stage=complete\n" );
+	#endif
 
 	return pentSpawnSpot;
 }

@@ -2619,6 +2619,18 @@ void CBasePlayer::UpdatePlayerSound( void )
 
 void CBasePlayer::PostThink()
 {
+#if defined(__GAMECUBE__)
+	/* Lean Pure Flipper: full PostThink (fall/tank/…) hung Host_Frame on
+	 * c0a0. Keep weapon ItemPostFrame so PrimaryAttack / UTIL_TraceLine run. */
+	if( ( g_engfuncs.CheckParm( (char *)"-gcnewgame", NULL )
+		|| g_engfuncs.CheckParm( (char *)"-gcmenuplaystart", NULL ) )
+		&& !g_engfuncs.CheckParm( (char *)"-gcfullphysics", NULL ))
+	{
+		if( !g_fGameOver && IsAlive() )
+			ItemPostFrame();
+		return;
+	}
+#endif
 	if( g_fGameOver )
 		goto pt_end;	// intermission or finale
 
@@ -2826,6 +2838,16 @@ edict_t *EntSelectSpawnPoint( CBaseEntity *pPlayer )
 
 	player = pPlayer->edict();
 
+	#if defined(__GAMECUBE__)
+	if( g_engfuncs.CheckParm( (char *)"-gcnewgame", NULL )
+		|| g_engfuncs.CheckParm( (char *)"-gcmenuplaystart", NULL ))
+	{
+		/* DOL reclaim */ (void)0; // ALERT( at_console, "*GameCube: EntSelectSpawnPoint stage=singleplayer start\n" );
+		pSpot = UTIL_FindEntityByClassname( NULL, "info_player_start" );
+		goto ReturnSpot;
+	}
+	#endif
+
 	// choose a info_player_deathmatch point
 	if( g_pGameRules->IsCoOp() )
 	{
@@ -2894,7 +2916,13 @@ edict_t *EntSelectSpawnPoint( CBaseEntity *pPlayer )
 	// If startspot is set, (re)spawn there.
 	if( FStringNull( gpGlobals->startspot ) || (STRING( gpGlobals->startspot ) )[0] == '\0')
 	{
+		#if defined(__GAMECUBE__)
+		/* DOL reclaim */ (void)0; // ALERT( at_console, "*GameCube: EntSelectSpawnPoint stage=start lookup begin\n" );
+		#endif
 		pSpot = UTIL_FindEntityByClassname( NULL, "info_player_start" );
+		#if defined(__GAMECUBE__)
+		/* DOL reclaim */ (void)0; // ALERT( at_console, "*GameCube: EntSelectSpawnPoint stage=start lookup ready\n" );
+		#endif
 		if( !FNullEnt( pSpot ) )
 			goto ReturnSpot;
 	}
@@ -2918,6 +2946,9 @@ ReturnSpot:
 
 void CBasePlayer::Spawn( void )
 {
+	#if defined(__GAMECUBE__)
+	/* DOL reclaim */ (void)0; // ALERT( at_console, "*GameCube: CBasePlayer::Spawn stage=begin\n" );
+	#endif
 	m_flStartCharge = gpGlobals->time;
 	pev->classname = MAKE_STRING( "player" );
 	pev->health = 100;
@@ -2940,14 +2971,23 @@ void CBasePlayer::Spawn( void )
 	m_bitsDamageType = 0;
 	m_afPhysicsFlags = 0;
 	m_fLongJump = FALSE;// no longjump module. 
+	#if defined(__GAMECUBE__)
+	/* DOL reclaim */ (void)0; // ALERT( at_console, "*GameCube: CBasePlayer::Spawn stage=base_state ready\n" );
+	#endif
 
 	g_engfuncs.pfnSetPhysicsKeyValue( edict(), "slj", "0" );
 	g_engfuncs.pfnSetPhysicsKeyValue( edict(), "hl", "1" );
 	g_engfuncs.pfnSetPhysicsKeyValue( edict(), "fr", "1" );
 	g_engfuncs.pfnSetPhysicsKeyValue( edict(), "bj", bhopcap.value ? "0" : "1" );
+	#if defined(__GAMECUBE__)
+	/* DOL reclaim */ (void)0; // ALERT( at_console, "*GameCube: CBasePlayer::Spawn stage=physics_keys ready\n" );
+	#endif
 
 	pev->fov = m_iFOV = 0;// init field of view.
 	m_iClientFOV = -1; // make sure fov reset is sent
+	#if defined(__GAMECUBE__)
+	/* DOL reclaim */ (void)0; // ALERT( at_console, "*GameCube: CBasePlayer::Spawn stage=fov ready\n" );
+	#endif
 
 	m_flNextDecalTime = 0;// let this player decal as soon as he spawns.
 
@@ -2957,10 +2997,16 @@ void CBasePlayer::Spawn( void )
 	m_flTimeStepSound = 0;
 	m_iStepLeft = 0;
 	m_flFieldOfView = 0.5f;// some monsters use this to determine whether or not the player is looking at them.
+	#if defined(__GAMECUBE__)
+	/* DOL reclaim */ (void)0; // ALERT( at_console, "*GameCube: CBasePlayer::Spawn stage=timers ready\n" );
+	#endif
 
 	m_bloodColor = BLOOD_COLOR_RED;
 	m_flNextAttack = UTIL_WeaponTimeBase();
 	StartSneaking();
+	#if defined(__GAMECUBE__)
+	/* DOL reclaim */ (void)0; // ALERT( at_console, "*GameCube: CBasePlayer::Spawn stage=sneaking ready\n" );
+	#endif
 
 	m_iFlashBattery = 99;
 	m_flFlashLightTime = 1; // force first message
@@ -2968,12 +3014,40 @@ void CBasePlayer::Spawn( void )
 	// dont let uninitialized value here hurt the player
 	m_flFallVelocity = 0;
 
-	g_pGameRules->SetDefaultPlayerTeam( this );
-	g_pGameRules->GetPlayerSpawnSpot( this );
+	#if defined(__GAMECUBE__)
+	if( g_engfuncs.CheckParm( (char *)"-gcnewgame", NULL )
+		|| g_engfuncs.CheckParm( (char *)"-gcmenuplaystart", NULL ))
+	{
+		/* The direct-map / menu-New-Game route is single-player. Avoid the
+		 * team-rule virtual dispatch here; on the GameCube static module path
+		 * it does not return before the player can reach its spawn spot. */
+		/* DOL reclaim */ (void)0; // ALERT( at_console, "*GameCube: CBasePlayer::Spawn stage=team skipped singleplayer\n" );
+	}
+	else
+	#endif
+		g_pGameRules->SetDefaultPlayerTeam( this );
+	#if defined(__GAMECUBE__)
+	/* DOL reclaim */ (void)0; // ALERT( at_console, "*GameCube: CBasePlayer::Spawn stage=team ready\n" );
+	/* DOL reclaim */ (void)0; // ALERT( at_console, "*GameCube: CBasePlayer::Spawn stage=spawnspot begin\n" );
+	if( g_engfuncs.CheckParm( (char *)"-gcnewgame", NULL )
+		|| g_engfuncs.CheckParm( (char *)"-gcmenuplaystart", NULL ))
+		static_cast<CGameRules *>( g_pGameRules )->CGameRules::GetPlayerSpawnSpot( this );
+	else
+	#endif
+		g_pGameRules->GetPlayerSpawnSpot( this );
+	#if defined(__GAMECUBE__)
+	/* DOL reclaim */ (void)0; // ALERT( at_console, "*GameCube: CBasePlayer::Spawn stage=spawnspot ready\n" );
+	#endif
 
+	#if defined(__GAMECUBE__)
+	/* DOL reclaim */ (void)0; // ALERT( at_console, "*GameCube: CBasePlayer::Spawn stage=model begin\n" );
+	#endif
 	SET_MODEL( ENT( pev ), "models/player.mdl" );
 	g_ulModelIndexPlayer = pev->modelindex;
 	pev->sequence = LookupActivity( ACT_IDLE );
+	#if defined(__GAMECUBE__)
+	/* DOL reclaim */ (void)0; // ALERT( at_console, "*GameCube: CBasePlayer::Spawn stage=model ready\n" );
+	#endif
 
 	if( FBitSet( pev->flags, FL_DUCKING ) ) 
 		UTIL_SetSize( pev, VEC_DUCK_HULL_MIN, VEC_DUCK_HULL_MAX );
@@ -2981,7 +3055,13 @@ void CBasePlayer::Spawn( void )
 		UTIL_SetSize( pev, VEC_HULL_MIN, VEC_HULL_MAX );
 
 	pev->view_ofs = VEC_VIEW;
+	#if defined(__GAMECUBE__)
+	/* DOL reclaim */ (void)0; // ALERT( at_console, "*GameCube: CBasePlayer::Spawn stage=precache begin\n" );
+	#endif
 	Precache();
+	#if defined(__GAMECUBE__)
+	/* DOL reclaim */ (void)0; // ALERT( at_console, "*GameCube: CBasePlayer::Spawn stage=precache ready\n" );
+	#endif
 	m_HackedGunPos = Vector( 0, 32, 0 );
 
 	if( m_iPlayerSound == SOUNDLIST_EMPTY )
@@ -3009,7 +3089,17 @@ void CBasePlayer::Spawn( void )
 
 	m_flNextChatTime = gpGlobals->time;
 
+	#if defined(__GAMECUBE__)
+	/* DOL reclaim */ (void)0; // ALERT( at_console, "*GameCube: CBasePlayer::Spawn stage=gamerules begin\n" );
+	if( g_engfuncs.CheckParm( (char *)"-gcnewgame", NULL )
+		|| g_engfuncs.CheckParm( (char *)"-gcmenuplaystart", NULL ))
+		/* DOL reclaim */ (void)0; // ALERT( at_console, "*GameCube: CBasePlayer::Spawn stage=gamerules skipped singleplayer\n" );
+	else
+	#endif
 	g_pGameRules->PlayerSpawn( this );
+	#if defined(__GAMECUBE__)
+	/* DOL reclaim */ (void)0; // ALERT( at_console, "*GameCube: CBasePlayer::Spawn stage=complete\n" );
+	#endif
 }
 
 void CBasePlayer::Precache( void )
@@ -3965,6 +4055,17 @@ void CBasePlayer::ItemPostFrame()
 	if( !m_pActiveItem )
 		return;
 
+#if defined(__GAMECUBE__)
+	{
+		static int gc_g120_itempost_logged;
+		if( !gc_g120_itempost_logged && ( pev->button & IN_ATTACK ))
+		{
+			gc_g120_itempost_logged = 1;
+			ALERT( at_console, "*GameCube: ItemPostFrame id=%d buttons=0x%x\n",
+				m_pActiveItem->m_iId, (unsigned)pev->button );
+		}
+	}
+#endif
 	m_pActiveItem->ItemPostFrame();
 }
 
@@ -4037,7 +4138,8 @@ void CBasePlayer::UpdateClientData( void )
 
 	/* New Game bring-up: full UpdateClientData (weapon/HUD msgs, status bar)
 	 * stalls Host_ServerFrame after G36. Clear init once, then no-op. */
-	if( g_engfuncs.CheckParm( (char *)"-gcnewgame", NULL )
+	if( ( g_engfuncs.CheckParm( (char *)"-gcnewgame", NULL )
+		|| g_engfuncs.CheckParm( (char *)"-gcmenuplaystart", NULL ) )
 		&& !g_engfuncs.CheckParm( (char *)"-gcfullphysics", NULL ) )
 	{
 		if( m_fInitHUD )
@@ -4074,20 +4176,22 @@ void CBasePlayer::UpdateClientData( void )
 			}
 		}
 
-		FireTargets( "game_playerspawn", this, this, USE_TOGGLE, 0 );
+		{
+			FireTargets( "game_playerspawn", this, this, USE_TOGGLE, 0 );
 
-		// Send flashlight status
-		MESSAGE_BEGIN( MSG_ONE, gmsgFlashlight, NULL, pev );
-			WRITE_BYTE( FlashlightIsOn() ? 1 : 0 );
-			WRITE_BYTE( m_iFlashBattery );
-		MESSAGE_END();
+			// Send flashlight status
+			MESSAGE_BEGIN( MSG_ONE, gmsgFlashlight, NULL, pev );
+				WRITE_BYTE( FlashlightIsOn() ? 1 : 0 );
+				WRITE_BYTE( m_iFlashBattery );
+			MESSAGE_END();
 
-		// Vit_amiN: the geiger state could run out of sync, too
-		MESSAGE_BEGIN( MSG_ONE, gmsgGeigerRange, NULL, pev );
-			WRITE_BYTE( 0 );
-		MESSAGE_END();
+			// Vit_amiN: the geiger state could run out of sync, too
+			MESSAGE_BEGIN( MSG_ONE, gmsgGeigerRange, NULL, pev );
+				WRITE_BYTE( 0 );
+			MESSAGE_END();
 
-		InitStatusBar();
+			InitStatusBar();
+		}
 	}
 
 	if( m_iHideHUD != m_iClientHideHUD )

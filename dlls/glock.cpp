@@ -121,11 +121,53 @@ void CGlock::SecondaryAttack( void )
 
 void CGlock::PrimaryAttack( void )
 {
+#if defined(__GAMECUBE__)
+	{
+		static int gc_g120_primary_logged;
+		if( !gc_g120_primary_logged )
+		{
+			gc_g120_primary_logged = 1;
+			ALERT( at_console, "*GameCube: PrimaryAttack weapon=glock clip=%d\n", m_iClip );
+		}
+	}
+#endif
 	GlockFire( 0.01f, 0.3f, TRUE );
 }
 
 void CGlock::GlockFire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
 {
+#if defined(__GAMECUBE__)
+	/* Lean: skip GetGunPosition/SetAnimation/PLAYBACK_EVENT; FireBullets ray only. */
+	if( g_engfuncs.CheckParm( (char *)"-gcnewgame", NULL )
+		&& !g_engfuncs.CheckParm( (char *)"-gcfullphysics", NULL ))
+	{
+		static int gc_g121_lean_logged;
+		Vector vecSrc;
+
+		(void)flSpread;
+		(void)fUseAutoAim;
+		if( m_iClip <= 0 )
+		{
+			m_flNextPrimaryAttack = gpGlobals->time + 0.2f;
+			return;
+		}
+		m_iClip--;
+		UTIL_MakeVectors( m_pPlayer->pev->v_angle );
+		vecSrc = m_pPlayer->pev->origin;
+		vecSrc.z += 28.0f;
+		m_pPlayer->FireBulletsPlayer( 1, vecSrc, gpGlobals->v_forward,
+			Vector( 0, 0, 0 ), 8192, BULLET_PLAYER_9MM, 0, 0,
+			m_pPlayer->pev, m_pPlayer->random_seed );
+		m_flNextPrimaryAttack = m_flNextSecondaryAttack = gpGlobals->time + flCycleTime;
+		if( !gc_g121_lean_logged )
+		{
+			gc_g121_lean_logged = 1;
+			ALERT( at_console, "*GameCube: GlockFire lean FireBullets clip=%d\n", m_iClip );
+		}
+		return;
+	}
+#endif
+
 	if( m_iClip <= 0 )
 	{
 		if( m_fFireOnEmpty )
@@ -179,6 +221,17 @@ void CGlock::GlockFire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
 	vecDir = m_pPlayer->FireBulletsPlayer( 1, vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, BULLET_PLAYER_9MM, 0, 0, m_pPlayer->pev, m_pPlayer->random_seed );
 
 	PLAYBACK_EVENT_FULL( flags, m_pPlayer->edict(), fUseAutoAim ? m_usFireGlock1 : m_usFireGlock2, 0.0, g_vecZero, g_vecZero, vecDir.x, vecDir.y, 0, 0, ( m_iClip == 0 ) ? 1 : 0, 0 );
+#if defined(__GAMECUBE__)
+	{
+		static int gc_g121_playback_logged;
+		if( !gc_g121_playback_logged )
+		{
+			gc_g121_playback_logged = 1;
+			ALERT( at_console, "*GameCube: G121 GlockFire PlaybackEvent flags=0x%x ev=%u clip=%d\n",
+				flags, (unsigned)( fUseAutoAim ? m_usFireGlock1 : m_usFireGlock2 ), m_iClip );
+		}
+	}
+#endif
 
 	m_flNextPrimaryAttack = m_flNextSecondaryAttack = GetNextAttackDelay( flCycleTime );
 

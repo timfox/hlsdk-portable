@@ -1460,6 +1460,24 @@ void UTIL_Bubbles( Vector mins, Vector maxs, int count )
 
 void UTIL_BubbleTrail( Vector from, Vector to, int count )
 {
+#if defined(__GAMECUBE__)
+	/* Lean: TE_BUBBLETRAIL / UTIL_WaterLevel deferred with gunshot TE hangs. */
+	if( g_engfuncs.CheckParm( (char *)"-gcnewgame", NULL )
+		&& !g_engfuncs.CheckParm( (char *)"-gcfullphysics", NULL ))
+	{
+		static int gc_bubble_logged;
+
+		(void)from;
+		(void)to;
+		(void)count;
+		if( !gc_bubble_logged )
+		{
+			gc_bubble_logged = 1;
+			ALERT( at_console, "*GameCube: lean UTIL_BubbleTrail tip-safe\n" );
+		}
+		return;
+	}
+#endif
 	float flHeight = UTIL_WaterLevel( from, from.z, from.z + 256 );
 	flHeight = flHeight - from.z;
 

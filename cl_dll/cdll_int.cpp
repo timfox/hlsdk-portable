@@ -288,10 +288,22 @@ the hud variables.
 
 void DLLEXPORT HUD_Init( void )
 {
+#ifdef __GAMECUBE__
+	gEngfuncs.Con_Printf( "Xash3D GameCube: HUD_Init begin\n" );
+#endif
 	InitInput();
+#ifdef __GAMECUBE__
+	gEngfuncs.Con_Printf( "Xash3D GameCube: HUD_Init input ready\n" );
+#endif
 	gHUD.Init();
+#ifdef __GAMECUBE__
+	gEngfuncs.Con_Printf( "Xash3D GameCube: HUD_Init hud ready\n" );
+#endif
 #if USE_VGUI
 	Scheme_Init();
+#ifdef __GAMECUBE__
+	gEngfuncs.Con_Printf( "Xash3D GameCube: HUD_Init scheme ready\n" );
+#endif
 #endif
 }
 

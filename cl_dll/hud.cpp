@@ -134,6 +134,35 @@ static int GC_HudQuality( void )
 
 	return value;
 }
+
+/* G336: avoid libc malloc during HUD_Init — can stall after StatusIcon on
+ * denser AM cold New Game (probe 20260810-035405). */
+#define GC_HUDLIST_POOL 32
+static HUDLIST s_gcHudListPool[GC_HUDLIST_POOL];
+static unsigned char s_gcHudListUsed[GC_HUDLIST_POOL];
+
+static HUDLIST *GC_HudListAlloc( void )
+{
+	int i;
+
+	for( i = 0; i < GC_HUDLIST_POOL; i++ )
+	{
+		if( !s_gcHudListUsed[i] )
+		{
+			s_gcHudListUsed[i] = 1;
+			memset( &s_gcHudListPool[i], 0, sizeof( HUDLIST ));
+			return &s_gcHudListPool[i];
+		}
+	}
+	gEngfuncs.Con_Printf( "Xash3D GameCube: HUDLIST pool exhausted\n" );
+	return NULL;
+}
+
+static void GC_HudListResetPool( void )
+{
+	memset( s_gcHudListUsed, 0, sizeof( s_gcHudListUsed ));
+	memset( s_gcHudListPool, 0, sizeof( s_gcHudListPool ));
+}
 #endif
 
 //DECLARE_MESSAGE( m_Logo, Logo )
@@ -386,9 +415,11 @@ void CHud::Init( void )
 		HOOK_MESSAGE( StatusText );
 		HOOK_MESSAGE( StatusValue );
 		m_iLogo = 0;
-		CVAR_CREATE( "zoom_sensitivity_ratio", "1.2", FCVAR_ARCHIVE );
-		default_fov = CVAR_CREATE( "default_fov", "90", FCVAR_ARCHIVE );
-		m_iFOV = default_fov ? default_fov->value : 90;
+		/* G280: avoid CVAR_CREATE alloc after StatusValue — was tipping MEM1
+		 * (Unloading world before "minimal ready"). Reuse existing cvars. */
+		gEngfuncs.Con_Printf( "Xash3D GameCube: CHud::Init lean cvars\n" );
+		default_fov = gEngfuncs.pfnGetCvarPointer( "default_fov" );
+		m_iFOV = default_fov ? (int)default_fov->value : 90;
 		m_flMouseSensitivity = 0;
 		m_iKeyBits = 0;
 		m_iWeaponBits = 0;
@@ -528,6 +559,10 @@ void CHud::Init( void )
 #endif // MOBILE_HACKS
 
 	// Clear any old HUD list
+#ifdef __GAMECUBE__
+	GC_HudListResetPool();
+	m_pHudList = NULL;
+#else
 	if( m_pHudList )
 	{
 		HUDLIST *pList;
@@ -539,6 +574,7 @@ void CHud::Init( void )
 		}
 		m_pHudList = NULL;
 	}
+#endif
 
 	// In case we get messages before the first update -- time will be valid
 	m_flTime = 1.0;
@@ -557,6 +593,15 @@ void CHud::Init( void )
 	m_AmmoSecondary.Init();
 	m_TextMessage.Init();
 	m_StatusIcons.Init();
+#ifdef __GAMECUBE__
+	gEngfuncs.Con_Printf( "Xash3D GameCube: CHud::Init StatusIcons ready\n" );
+	/* G336: denser AM ISOs can stall in MOTD/Scoreboard/Menu AddHudElem
+	 * (libc malloc) or richpresence ClientCmd after StatusIcon
+	 * (probe 20260810-035405). Combat HUD hooks are already registered. */
+	MsgFunc_ResetHUD( 0, 0, NULL );
+	gEngfuncs.Con_Printf( "Xash3D GameCube: CHud::Init hud ready (G336 lean tail)\n" );
+	return;
+#else
 #if USE_VGUI
 	GetClientVoiceMgr()->Init(&g_VoiceStatusHelper, (vgui::Panel**)&gViewPort);
 #endif
@@ -573,6 +618,7 @@ void CHud::Init( void )
 	MsgFunc_ResetHUD( 0, 0, NULL );
 	ClientCmd( "richpresence_gamemode\n" );
 	ClientCmd( "richpresence_update\n" );
+#endif
 }
 
 // CHud destructor
@@ -583,6 +629,10 @@ CHud::~CHud()
 	delete[] m_rgrcRects;
 	delete[] m_rgszSpriteNames;
 
+#ifdef __GAMECUBE__
+	GC_HudListResetPool();
+	m_pHudList = NULL;
+#else
 	if( m_pHudList )
 	{
 		HUDLIST *pList;
@@ -594,6 +644,7 @@ CHud::~CHud()
 		}
 		m_pHudList = NULL;
 	}
+#endif
 }
 
 // GetSpriteIndex()
@@ -958,7 +1009,11 @@ void CHud::AddHudElem( CHudBase *phudelem )
 	if( !phudelem )
 		return;
 
+#ifdef __GAMECUBE__
+	pdl = GC_HudListAlloc();
+#else
 	pdl = (HUDLIST *)malloc( sizeof(HUDLIST) );
+#endif
 	if( !pdl )
 		return;
 

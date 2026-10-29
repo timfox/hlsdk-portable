@@ -119,7 +119,8 @@ def build(bld):
 	else:
 		install_path = bld.env.PREFIX
 
-	bld.shlib(
+	builder = bld.stlib if bld.env.DEST_OS == 'gamecube' else bld.shlib
+	builder(
 		source   = source,
 		target   = 'client' + bld.env.POSTFIX,
 		name     = 'client',

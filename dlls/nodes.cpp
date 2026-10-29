@@ -118,6 +118,16 @@ void CGraph::InitGraph( void )
 //=========================================================
 int CGraph::AllocNodes( void )
 {
+#if XASH_GAMECUBE
+	if( g_engfuncs.CheckParm( (char *)"-gcmap", NULL ) )
+	{
+		WorldGraph.m_pNodes = NULL;
+		WorldGraph.m_cNodes = 0;
+		ALERT( at_aiconsole, "*GameCube gcmap: AllocNodes skipped\n" );
+		return FALSE;
+	}
+#endif
+
 	//  malloc all of the nodes
 	WorldGraph.m_pNodes = (CNode *)calloc( sizeof(CNode), MAX_NODES );
 
@@ -1579,6 +1589,15 @@ void CNodeEnt::Spawn( void )
 		return;
 	}
 
+#if XASH_GAMECUBE
+	/* No node pool on the gcmap smoke route — discard info_node ents immediately. */
+	if( !WorldGraph.m_pNodes || g_engfuncs.CheckParm( (char *)"-gcmap", NULL ) )
+	{
+		REMOVE_ENTITY( edict() );
+		return;
+	}
+#endif
+
 	if( WorldGraph.m_cNodes == 0 )
 	{
 		// this is the first node to spawn, spawn the test hull entity that builds and walks the node tree
@@ -2436,9 +2455,11 @@ int CGraph::FLoadGraph( const char *szMapName )
 
 		// Malloc for the nodes
 		//
-		m_pNodes = (CNode *)calloc( sizeof(CNode), m_cNodes );
+		m_pNodes = NULL;
+		if( m_cNodes > 0 )
+			m_pNodes = (CNode *)calloc( sizeof(CNode), m_cNodes );
 
-		if( !m_pNodes )
+		if( m_cNodes > 0 && !m_pNodes )
 		{
 			ALERT( at_aiconsole, "**ERROR**\nCouldn't malloc %d nodes!\n", m_cNodes );
 			goto NoMemory;
@@ -2449,16 +2470,20 @@ int CGraph::FLoadGraph( const char *szMapName )
 		length -= sizeof(CNode) * m_cNodes;
 		if( length < 0 )
 			goto ShortFile;
-		memcpy( m_pNodes, pMemFile, sizeof(CNode) * m_cNodes );
-		pMemFile += sizeof(CNode) * m_cNodes;
-
-		ByteswapNodes();
+		if( m_cNodes > 0 )
+		{
+			memcpy( m_pNodes, pMemFile, sizeof(CNode) * m_cNodes );
+			pMemFile += sizeof(CNode) * m_cNodes;
+			ByteswapNodes();
+		}
 
 		// Malloc for the link pool
 		//
-		m_pLinkPool = (CLink *)calloc( sizeof(CLink), m_cLinks );
+		m_pLinkPool = NULL;
+		if( m_cLinks > 0 )
+			m_pLinkPool = (CLink *)calloc( sizeof(CLink), m_cLinks );
 
-		if( !m_pLinkPool )
+		if( m_cLinks > 0 && !m_pLinkPool )
 		{
 			ALERT( at_aiconsole, "**ERROR**\nCouldn't malloc %d link!\n", m_cLinks );
 			goto NoMemory;
@@ -2471,10 +2496,12 @@ int CGraph::FLoadGraph( const char *szMapName )
 			length -= sizeof(CLink) * m_cLinks;
 			if( length < 0 )
 				goto ShortFile;
-			memcpy( m_pLinkPool, pMemFile, sizeof(CLink) * m_cLinks );
-			pMemFile += sizeof(CLink) * m_cLinks;
-
-			ByteswapLinks();
+			if( m_cLinks > 0 )
+			{
+				memcpy( m_pLinkPool, pMemFile, sizeof(CLink) * m_cLinks );
+				pMemFile += sizeof(CLink) * m_cLinks;
+				ByteswapLinks();
+			}
 		}
 #if _GRAPH_VERSION != _GRAPH_VERSION_RETAIL
 		else
@@ -2493,8 +2520,10 @@ int CGraph::FLoadGraph( const char *szMapName )
 
 		// Malloc for the sorting info.
 		//
-		m_di = (DIST_INFO *)calloc( sizeof(DIST_INFO), m_cNodes );
-		if( !m_di )
+		m_di = NULL;
+		if( m_cNodes > 0 )
+			m_di = (DIST_INFO *)calloc( sizeof(DIST_INFO), m_cNodes );
+		if( m_cNodes > 0 && !m_di )
 		{
 			ALERT( at_aiconsole, "***ERROR**\nCouldn't malloc %d entries sorting nodes!\n", m_cNodes );
 			goto NoMemory;
@@ -2505,16 +2534,20 @@ int CGraph::FLoadGraph( const char *szMapName )
 		length -= sizeof(DIST_INFO) * m_cNodes;
 		if( length < 0 )
 			goto ShortFile;
-		memcpy( m_di, pMemFile, sizeof(DIST_INFO) * m_cNodes );
-		pMemFile += sizeof(DIST_INFO) * m_cNodes;
-
-		ByteswapDistInfo();
+		if( m_cNodes > 0 )
+		{
+			memcpy( m_di, pMemFile, sizeof(DIST_INFO) * m_cNodes );
+			pMemFile += sizeof(DIST_INFO) * m_cNodes;
+			ByteswapDistInfo();
+		}
 
 		// Malloc for the routing info.
 		//
 		m_fRoutingComplete = FALSE;
-		m_pRouteInfo = (signed char *)calloc( sizeof(signed char), m_nRouteInfo );
-		if( !m_pRouteInfo )
+		m_pRouteInfo = NULL;
+		if( m_nRouteInfo > 0 )
+			m_pRouteInfo = (signed char *)calloc( sizeof(signed char), m_nRouteInfo );
+		if( m_nRouteInfo > 0 && !m_pRouteInfo )
 		{
 			ALERT( at_aiconsole, "***ERROR**\nCouldn't malloc %d route bytes!\n", m_nRouteInfo );
 			goto NoMemory;
@@ -2530,14 +2563,19 @@ int CGraph::FLoadGraph( const char *szMapName )
 		length -= sizeof(char) * m_nRouteInfo;
 		if( length < 0 )
 			goto ShortFile;
-		memcpy( m_pRouteInfo, pMemFile, sizeof(char) * m_nRouteInfo );
-		pMemFile += sizeof(char) * m_nRouteInfo;
+		if( m_nRouteInfo > 0 )
+		{
+			memcpy( m_pRouteInfo, pMemFile, sizeof(char) * m_nRouteInfo );
+			pMemFile += sizeof(char) * m_nRouteInfo;
+		}
 		m_fRoutingComplete = TRUE;
 
 		// malloc for the hash links
 		//
-		m_pHashLinks = (short *)calloc( sizeof(short), m_nHashLinks );
-		if( !m_pHashLinks )
+		m_pHashLinks = NULL;
+		if( m_nHashLinks > 0 )
+			m_pHashLinks = (short *)calloc( sizeof(short), m_nHashLinks );
+		if( m_nHashLinks > 0 && !m_pHashLinks )
 		{
 			ALERT( at_aiconsole, "***ERROR**\nCouldn't malloc %d hash link bytes!\n", m_nHashLinks );
 			goto NoMemory;
@@ -2548,10 +2586,12 @@ int CGraph::FLoadGraph( const char *szMapName )
 		length -= sizeof(short) * m_nHashLinks;
 		if( length < 0 )
 			goto ShortFile;
-		memcpy( m_pHashLinks, pMemFile, sizeof(short) * m_nHashLinks );
-		// pMemFile += sizeof(short) * m_nHashLinks;
-
-		ByteswapHashLinks();
+		if( m_nHashLinks > 0 )
+		{
+			memcpy( m_pHashLinks, pMemFile, sizeof(short) * m_nHashLinks );
+			// pMemFile += sizeof(short) * m_nHashLinks;
+			ByteswapHashLinks();
+		}
 
 		// Set the graph present flag, clear the pointers set flag
 		//

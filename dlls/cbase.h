@@ -750,6 +750,11 @@ template <class T> T * GetClassPtr( T *a )
 	{
 		// allocate private data 
 		a = new( pev ) T;
+#if defined(XASH_GAMECUBE) || defined(__GAMECUBE__)
+		/* Engine soft-fails ALLOC_PRIVATE under MEM1 tip; never deref NULL. */
+		if( a == NULL )
+			return NULL;
+#endif
 		a->pev = pev;
 	}
 	return a;

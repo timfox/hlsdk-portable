@@ -1479,6 +1479,62 @@ Vector CBaseEntity::FireBulletsPlayer( ULONG cShots, Vector vecSrc, Vector vecDi
 	if( pevAttacker == NULL )
 		pevAttacker = pev;  // the default attacker is ourselves
 
+#if defined(__GAMECUBE__)
+	/* Lean: hull world-only TraceLine + TraceAttack/ApplyMultiDamage.
+	 * DecalGunshot hung Host_Frame (UTIL_GunshotDecalTrace); TEXTURETYPE /
+	 * BubbleTrail still deferred. */
+	if( g_engfuncs.CheckParm( (char *)"-gcnewgame", NULL )
+		&& !g_engfuncs.CheckParm( (char *)"-gcfullphysics", NULL ))
+	{
+		static int gc_fb_logged;
+		float start[3], end[3];
+		Vector vecEnd;
+		float dmg;
+		int takedmg = -1;
+
+		(void)cShots;
+		(void)vecSpread;
+		(void)iTracerFreq;
+		(void)shared_rand;
+		(void)tracerCount;
+		(void)vecRight;
+		(void)vecUp;
+		vecEnd = vecSrc + vecDirShooting * flDistance;
+		start[0] = vecSrc.x;
+		start[1] = vecSrc.y;
+		start[2] = vecSrc.z;
+		end[0] = vecEnd.x;
+		end[1] = vecEnd.y;
+		end[2] = vecEnd.z;
+		memset( &tr, 0, sizeof( tr ));
+		g_engfuncs.pfnTraceLine( start, end, 0, ENT( pev ), &tr );
+		ClearMultiDamage();
+		gMultiDamage.type = DMG_BULLET | DMG_NEVERGIB;
+		if( tr.flFraction != 1.0f && tr.pHit )
+		{
+			CBaseEntity *pEntity = CBaseEntity::Instance( tr.pHit );
+
+			dmg = iDamage ? (float)iDamage : gSkillData.plrDmg9MM;
+			if( pEntity )
+			{
+				takedmg = (int)pEntity->pev->takedamage;
+				pEntity->TraceAttack( pevAttacker, dmg, vecDirShooting, &tr, DMG_BULLET );
+			}
+		}
+		ApplyMultiDamage( pev, pevAttacker );
+		/* Tip-safe DecalGunshot (no TE) — G293 seed covers Flipper draw. */
+		if( tr.flFraction != 1.0f )
+			DecalGunshot( &tr, iBulletType );
+		if( !gc_fb_logged )
+		{
+			gc_fb_logged = 1;
+			ALERT( at_console, "*GameCube: FireBulletsPlayer fraction=%.3f TraceAttack td=%d\n",
+				tr.flFraction, takedmg );
+		}
+		return Vector( 0, 0, 0 );
+	}
+#endif
+
 	ClearMultiDamage();
 	gMultiDamage.type = DMG_BULLET | DMG_NEVERGIB;
 

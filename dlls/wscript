@@ -61,7 +61,8 @@ def build(bld):
 		# on Windows or if no gamedll_osx or gamedll_linux is set, use default gamedll key
 		server_dll_name = bld.env.SERVER_LIBRARY_NAME
 
-	bld.shlib(
+	builder = bld.stlib if bld.env.DEST_OS == 'gamecube' else bld.shlib
+	builder(
 		source   = source,
 		target   = server_dll_name + bld.env.POSTFIX,
 		name     = 'server',

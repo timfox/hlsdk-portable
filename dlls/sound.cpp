@@ -1246,6 +1246,16 @@ void SENTENCEG_Init()
 	if( fSentencesInit )
 		return;
 
+#if XASH_GAMECUBE
+	/* G381: sentences.txt load/parse + large name-table clear hangs on cold
+	 * tram→AM changelevel discs (c0a0e→c1a0, post-bodyque). Sentence groups
+	 * are optional for campaign continuity bring-up. */
+	fSentencesInit = TRUE;
+	gcallsentences = 0;
+	ALERT( at_console, "*GameCube: skipping SENTENCEG_Init during port bring-up\n" );
+	return;
+#endif
+
 	memset( gszallsentencenames, 0, CVOXFILESENTENCEMAX * CBSENTENCENAME_MAX );
 	gcallsentences = 0;
 
@@ -1462,6 +1472,26 @@ char TEXTURETYPE_Find( char *name )
 
 float TEXTURETYPE_PlaySound( TraceResult *ptr,  Vector vecSrc, Vector vecEnd, int iBulletType )
 {
+#if defined(__GAMECUBE__)
+	/* Lean: TRACE_TEXTURE + EMIT_SOUND hung Host_Frame with DecalGunshot.
+	 * Return a concrete crowbar volume so Smack callers stay tip-safe. */
+	if( g_engfuncs.CheckParm( (char *)"-gcnewgame", NULL )
+		&& !g_engfuncs.CheckParm( (char *)"-gcfullphysics", NULL ))
+	{
+		static int gc_texsound_logged;
+
+		(void)ptr;
+		(void)vecSrc;
+		(void)vecEnd;
+		(void)iBulletType;
+		if( !gc_texsound_logged )
+		{
+			gc_texsound_logged = 1;
+			ALERT( at_console, "*GameCube: lean TEXTURETYPE_PlaySound tip-safe\n" );
+		}
+		return 0.6f;
+	}
+#endif
 	// hit the world, try to play sound based on texture material type
 	char chTextureType;
 	float fvol;

@@ -61,7 +61,7 @@ void CHud::Think( void )
 	newfov = HUD_GetFOV();
 	if( newfov == 0 )
 	{
-		m_iFOV = default_fov->value;
+		m_iFOV = default_fov ? (int)default_fov->value : 90;
 	}
 	else
 	{
@@ -70,7 +70,7 @@ void CHud::Think( void )
 
 	// the clients fov is actually set in the client data update section of the hud
 	// Set a new sensitivity
-	if( m_iFOV == default_fov->value )
+	if( !default_fov || m_iFOV == default_fov->value )
 	{
 		// reset to saved sensitivity
 		m_flMouseSensitivity = 0;
@@ -85,7 +85,7 @@ void CHud::Think( void )
 	if( m_iFOV == 0 )
 	{
 		// only let players adjust up in fov,  and only if they are not overriden by something else
-		m_iFOV = Q_max( default_fov->value, 90 );  
+		m_iFOV = Q_max( default_fov ? default_fov->value : 90, 90 );  
 	}
 
 	if( gEngfuncs.IsSpectateOnly() )
@@ -108,13 +108,23 @@ static HSPRITE s_gcLeanHud2 = 0;
 static void GC_LeanDrawHudDigit( HSPRITE sheet, int digit, int x, int y, int r, int g, int b )
 {
 	wrect_t rc;
+	int sheet_w;
+	float sx;
 
 	if( digit < 0 || digit > 9 || !sheet )
 		return;
-	rc.left = digit * 12;
+	sheet_w = SPR_Width( sheet, 0 );
+	if( sheet_w < 1 )
+		sheet_w = 128;
+	sx = (float)sheet_w / 128.0f;
+	rc.left = (int)( digit * 12 * sx );
 	rc.top = 0;
-	rc.right = rc.left + 12;
-	rc.bottom = 16;
+	rc.right = (int)(( digit * 12 + 12 ) * sx );
+	rc.bottom = (int)( 16 * sx );
+	if( rc.right <= rc.left )
+		rc.right = rc.left + 1;
+	if( rc.bottom <= rc.top )
+		rc.bottom = rc.top + 1;
 	SPR_Set( sheet, r, g, b );
 	SPR_DrawAdditive( 0, x, y, &rc );
 }
@@ -199,6 +209,8 @@ int CHud::Redraw( float flTime, int intermission )
 
 		if( q <= 0 )
 		{
+			int sheet_w, sheet_h;
+
 			/* Load number sheet first — same size as crosshairs; avoid last-slot OOM. */
 			if( !s_gcLeanHud2 )
 				s_gcLeanHud2 = SPR_Load( "sprites/gc_320hud2.spr" );
@@ -208,6 +220,76 @@ int CHud::Redraw( float flTime, int intermission )
 				s_gcLeanTrain = LoadSprite( "sprites/%d_train.spr" );
 			if( !s_gcLeanCross )
 				s_gcLeanCross = SPR_Load( "sprites/crosshairs.spr" );
+
+			/*
+			 * G183: draw hud2 (digits/icons) before chrome so Flipper TEXMAP0
+			 * reserved slots pin the number sheet first — world LRU thrash was
+			 * dropping gc_320hud2 after pain/train/cross (pics stuck at 3).
+			 */
+			if( s_gcLeanHud2 )
+			{
+				wrect_t cross, suit;
+				int hp = m_Health.m_iHealth;
+				int suit_val = m_Battery.m_iBat;
+				int clip = m_Ammo.GetLeanClip();
+				const int y = 4;
+				float sx, sy;
+
+				sheet_w = SPR_Width( s_gcLeanHud2, 0 );
+				sheet_h = SPR_Height( s_gcLeanHud2, 0 );
+				if( sheet_w < 1 )
+					sheet_w = 128;
+				if( sheet_h < 1 )
+					sheet_h = 128;
+				/* hud.txt 320 block assumes 128×128; scale for lean sheets. */
+				sx = (float)sheet_w / 128.0f;
+				sy = (float)sheet_h / 128.0f;
+
+				if( hp <= 0 )
+					hp = 100;
+				if( suit_val < 0 )
+					suit_val = 0;
+				if( suit_val > 999 )
+					suit_val = 999;
+				/* health cross icon at hud.txt: cross 0,72 16x16 — top-left */
+				cross.left = (int)( 0 * sx );
+				cross.top = (int)( 72 * sy );
+				cross.right = (int)( 16 * sx );
+				cross.bottom = (int)( 88 * sy );
+				if( cross.right <= cross.left )
+					cross.right = cross.left + 1;
+				if( cross.bottom <= cross.top )
+					cross.bottom = cross.top + 1;
+				SPR_Set( s_gcLeanHud2, 255, 160, 0 );
+				SPR_DrawAdditive( 0, 4, y, &cross );
+				GC_LeanDrawHudNumber( s_gcLeanHud2, hp, 22, y, 255, 160, 0 );
+
+				/* suit_empty 20,52 20x20 — top-right with armor digits */
+				suit.left = (int)( 20 * sx );
+				suit.top = (int)( 52 * sy );
+				suit.right = (int)( 40 * sx );
+				suit.bottom = (int)( 72 * sy );
+				if( suit.right <= suit.left )
+					suit.right = suit.left + 1;
+				if( suit.bottom <= suit.top )
+					suit.bottom = suit.top + 1;
+				{
+					const int sxpos = ScreenWidth - 20 - 4 - 36;
+
+					SPR_Set( s_gcLeanHud2, 0, 160, 255 );
+					SPR_DrawAdditive( 0, sxpos, y, &suit );
+					GC_LeanDrawHudNumber( s_gcLeanHud2, suit_val, sxpos + 22, y + 2, 0, 160, 255 );
+				}
+
+				/* Ammo/clip digits bottom-right when weapon has a clip. */
+				if( clip >= 0 )
+				{
+					if( clip > 999 )
+						clip = 999;
+					GC_LeanDrawHudNumber( s_gcLeanHud2, clip,
+						ScreenWidth - 4 - 36, ScreenHeight - 4 - 16, 255, 160, 0 );
+				}
+			}
 			if( s_gcLeanPain )
 			{
 				int y;
@@ -230,62 +312,41 @@ int CHud::Redraw( float flTime, int intermission )
 			}
 			if( s_gcLeanCross )
 			{
-				const int w = SPR_Width( s_gcLeanCross, 0 );
-				const int h = SPR_Height( s_gcLeanCross, 0 );
-				int x = ( ScreenWidth - w ) / 2;
-				int y = ( ScreenHeight - h ) / 2;
+				/*
+				 * G185: draw one crosshair cell, not the full 64×64 sheet.
+				 * Full-sheet holes was ~4 KiB EFB fill of mostly transparent
+				 * texels and dominated Flipper HUD cost after G183.
+				 * Retail cells are 32×32 on 128×128 → 16×16 on lean 64×64;
+				 * use 24×24 when the sheet allows for readability.
+				 */
+				const int sheet_w = SPR_Width( s_gcLeanCross, 0 );
+				const int sheet_h = SPR_Height( s_gcLeanCross, 0 );
+				int cell = 24;
+				wrect_t crc;
+				int x, y;
 
+				if( cell > sheet_w )
+					cell = sheet_w;
+				if( cell > sheet_h )
+					cell = sheet_h;
+				if( cell < 8 )
+					cell = ( sheet_w < sheet_h ) ? sheet_w : sheet_h;
+				crc.left = 0;
+				crc.top = 0;
+				crc.right = cell;
+				crc.bottom = cell;
+				x = ( ScreenWidth - cell ) / 2;
+				y = ( ScreenHeight - cell ) / 2;
 				if( x < 0 )
 					x = 0;
 				if( y < 0 )
 					y = 0;
 				SPR_Set( s_gcLeanCross, 0, 255, 0 );
-				SPR_DrawHoles( 0, x, y, NULL );
-			}
-			if( s_gcLeanHud2 )
-			{
-				wrect_t cross, suit;
-				int hp = m_Health.m_iHealth;
-				int suit_val = m_Battery.m_iBat;
-				int clip = m_Ammo.GetLeanClip();
-				const int y = 4;
-
-				if( hp <= 0 )
-					hp = 100;
-				if( suit_val < 0 )
-					suit_val = 0;
-				if( suit_val > 999 )
-					suit_val = 999;
-				/* health cross icon at hud.txt: cross 0,72 16x16 — top-left */
-				cross.left = 0;
-				cross.top = 72;
-				cross.right = 16;
-				cross.bottom = 88;
-				SPR_Set( s_gcLeanHud2, 255, 160, 0 );
-				SPR_DrawAdditive( 0, 4, y, &cross );
-				GC_LeanDrawHudNumber( s_gcLeanHud2, hp, 22, y, 255, 160, 0 );
-
-				/* suit_empty 20,52 20x20 — top-right with armor digits */
-				suit.left = 20;
-				suit.top = 52;
-				suit.right = 40;
-				suit.bottom = 72;
-				{
-					const int sx = ScreenWidth - 20 - 4 - 36;
-
-					SPR_Set( s_gcLeanHud2, 0, 160, 255 );
-					SPR_DrawAdditive( 0, sx, y, &suit );
-					GC_LeanDrawHudNumber( s_gcLeanHud2, suit_val, sx + 22, y + 2, 0, 160, 255 );
-				}
-
-				/* Ammo/clip digits bottom-right when weapon has a clip. */
-				if( clip >= 0 )
-				{
-					if( clip > 999 )
-						clip = 999;
-					GC_LeanDrawHudNumber( s_gcLeanHud2, clip,
-						ScreenWidth - 4 - 36, ScreenHeight - 4 - 16, 255, 160, 0 );
-				}
+				SPR_DrawHoles( 0, x, y, &crc );
+				if( m_iGcLeanHudLog == 0 )
+					gEngfuncs.Con_Printf(
+						"Xash3D GameCube: G185 lean crosshair cell=%dx%d (was %dx%d)\n",
+						cell, cell, sheet_w, sheet_h );
 			}
 			/* Once-flag lives on CHud — file/function statics re-spam on GC. */
 			if( m_iGcLeanHudLog == 0 )

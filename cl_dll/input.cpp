@@ -253,6 +253,13 @@ void KB_Add( const char *name, kbutton_t *pkb )
 		return;
 
 	p = (kblist_t *)malloc( sizeof(kblist_t) );
+	if( !p )
+	{
+#ifdef __GAMECUBE__
+		gEngfuncs.Con_Printf( "Xash3D GameCube: KB_Add OOM for %s\n", name );
+#endif
+		return;
+	}
 	memset( p, 0, sizeof(*p) );
 
 	strcpy( p->name, name );
@@ -271,11 +278,36 @@ Add kbutton_t definitions that the engine can query if needed
 */
 void KB_Init( void )
 {
+#ifdef __GAMECUBE__
+	gEngfuncs.Con_Printf( "Xash3D GameCube: KB_Init begin\n" );
+#endif
 	g_kbkeys = NULL;
 
+#ifdef __GAMECUBE__
+	/* Avoid heap malloc during New Game HUD_Init — MEM1 is often dry after
+	 * map-load scratch residency. Three fixed slots cover in_graph/mlook/jlook. */
+	{
+		static kblist_t gc_kb_slots[3];
+		static const char * const gc_kb_names[3] = { "in_graph", "in_mlook", "in_jlook" };
+		static kbutton_t * const gc_kb_ptrs[3] = { &in_graph, &in_mlook, &in_jlook };
+		int i;
+
+		memset( gc_kb_slots, 0, sizeof( gc_kb_slots ));
+		for( i = 0; i < 3; i++ )
+		{
+			strncpy( gc_kb_slots[i].name, gc_kb_names[i], sizeof( gc_kb_slots[i].name ) - 1 );
+			gc_kb_slots[i].name[sizeof( gc_kb_slots[i].name ) - 1] = '\0';
+			gc_kb_slots[i].pkey = gc_kb_ptrs[i];
+			gc_kb_slots[i].next = g_kbkeys;
+			g_kbkeys = &gc_kb_slots[i];
+		}
+	}
+	gEngfuncs.Con_Printf( "Xash3D GameCube: KB_Init end\n" );
+#else
 	KB_Add( "in_graph", &in_graph );
 	KB_Add( "in_mlook", &in_mlook );
 	KB_Add( "in_jlook", &in_jlook );
+#endif
 }
 
 /*
@@ -289,6 +321,12 @@ void KB_Shutdown( void )
 {
 	kblist_t *p, *n;
 	p = g_kbkeys;
+#ifdef __GAMECUBE__
+	/* Slots are static BSS — do not free(). */
+	g_kbkeys = NULL;
+	(void)p;
+	(void)n;
+#else
 	while( p )
 	{
 		n = p->next;
@@ -296,6 +334,7 @@ void KB_Shutdown( void )
 		p = n;
 	}
 	g_kbkeys = NULL;
+#endif
 }
 
 /*
@@ -1069,6 +1108,9 @@ InitInput
 */
 void InitInput( void )
 {
+#ifdef __GAMECUBE__
+	gEngfuncs.Con_Printf( "Xash3D GameCube: InitInput begin\n" );
+#endif
 	gEngfuncs.pfnAddCommand( "+moveup", IN_UpDown );
 	gEngfuncs.pfnAddCommand( "-moveup", IN_UpUp );
 	gEngfuncs.pfnAddCommand( "+movedown", IN_DownDown );
@@ -1143,12 +1185,33 @@ void InitInput( void )
 	m_forward		= gEngfuncs.pfnRegisterVariable( "m_forward","1", FCVAR_ARCHIVE );
 	m_side			= gEngfuncs.pfnRegisterVariable( "m_side","0.8", FCVAR_ARCHIVE );
 
+#ifdef __GAMECUBE__
+	gEngfuncs.Con_Printf( "Xash3D GameCube: InitInput commands ready\n" );
+#endif
+#ifdef __GAMECUBE__
+	/* G316: the retail map route has no spare MEM1 for optional third-person
+	 * camera commands/cvars. GameCube play is first-person; leave CAM state at
+	 * its static defaults and preserve the required controller input below. */
+	gEngfuncs.Con_Printf( "Xash3D GameCube: InitInput skipped CAM\n" );
+#else
 	// Initialize third person camera controls.
 	CAM_Init();
-	// Initialize inputs
+#endif
+	// Initialize inputs (registers sensitivity/joystick cvars — required after connect)
 	IN_Init();
+#ifdef __GAMECUBE__
+	gEngfuncs.Con_Printf( "Xash3D GameCube: InitInput IN ready\n" );
+#endif
 	// Initialize keyboard
 	KB_Init();
+#ifdef __GAMECUBE__
+	gEngfuncs.Con_Printf( "Xash3D GameCube: InitInput KB ready\n" );
+	/* V_Init only registers bob/chase cvars; under New Game MEM1 pressure it
+	 * aborts HUD_Init. Engine view defaults are enough for MAP_READY connect. */
+	gEngfuncs.Con_Printf( "Xash3D GameCube: InitInput skipped V_Init for gamecube\n" );
+	gEngfuncs.Con_Printf( "Xash3D GameCube: InitInput end\n" );
+	return;
+#endif
 	// Initialize view system
 	V_Init();
 }

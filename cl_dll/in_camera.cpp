@@ -169,6 +169,13 @@ void DLLEXPORT CAM_Think( void )
 #endif
 	vec3_t viewangles;
 
+#if XASH_GAMECUBE
+	/* G316: InitInput intentionally omits optional third-person cvars under
+	 * retail-map MEM1 pressure. The engine still calls this exported hook. */
+	if( !cam_command )
+		return;
+#endif
+
 	if( gEngfuncs.GetMaxClients() > 1 && CL_IsThirdPerson() )
 		CAM_ToFirstPerson();
 
@@ -551,6 +558,16 @@ void CAM_Init( void )
 void CAM_ClearStates( void )
 {
 	vec3_t viewangles;
+
+#if XASH_GAMECUBE
+	if( !cam_command || !cam_snapto || !cam_idealpitch || !cam_idealyaw || !cam_idealdist )
+	{
+		cam_thirdperson = 0;
+		cam_mousemove = 0;
+		cam_distancemove = 0;
+		return;
+	}
+#endif
 
 	gEngfuncs.GetViewAngles( (float *)viewangles );
 

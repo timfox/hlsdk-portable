@@ -204,6 +204,14 @@ LINK_ENTITY_TO_CLASS( bodyque, CCorpse )
 
 static void InitBodyQue( void )
 {
+#if XASH_GAMECUBE
+	/* G381 follow-up: CREATE_NAMED_ENTITY(bodyque)×4 can hang under MEM1
+	 * tip pressure on cold tram→AM changelevel discs (c0a0e→c1a0). Corpses
+	 * are optional for campaign continuity bring-up. */
+	g_pBodyQueueHead = NULL;
+	ALERT( at_console, "*GameCube: skipping InitBodyQue during port bring-up\n" );
+	return;
+#else
 	string_t istrClassname = MAKE_STRING( "bodyque" );
 
 	g_pBodyQueueHead = CREATE_NAMED_ENTITY( istrClassname );
@@ -217,6 +225,7 @@ static void InitBodyQue( void )
 	}
 
 	pev->owner = g_pBodyQueueHead;
+#endif
 }
 
 //
@@ -226,6 +235,8 @@ static void InitBodyQue( void )
 //
 void CopyToBodyQue( entvars_t *pev ) 
 {
+	if( !g_pBodyQueueHead )
+		return;
 	if( ( pev->effects & EF_NODRAW ) || !pev->modelindex )
 		return;
 
@@ -481,6 +492,13 @@ void CWorld::Precache( void )
 
 	///!!!LATER - do we want a sound ent in deathmatch? (sjb)
 	//pSoundEnt = CBaseEntity::Create( "soundent", g_vecZero, g_vecZero, edict() );
+#if XASH_GAMECUBE
+	/* G381: GetClassPtr(CSoundEnt) hangs on cold tram tip under MEM1 pressure
+	 * (c0a0e Dolphin probes). AI sound queue is optional for bring-up; ambient
+	 * still uses ambient_generic. */
+	pSoundEnt = NULL;
+	ALERT( at_console, "*GameCube: skipping CSoundEnt create during port bring-up\n" );
+#else
 	pSoundEnt = GetClassPtr( ( CSoundEnt *)NULL );
 
 	if( pSoundEnt )
@@ -491,18 +509,34 @@ void CWorld::Precache( void )
 	{
 		ALERT ( at_console, "**COULD NOT CREATE SOUNDENT**\n" );
 	}
+#endif
 
+#if XASH_GAMECUBE
+	ALERT( at_console, "*GameCube: world Precache post-soundent\n" );
+#endif
 	InitBodyQue();
+#if XASH_GAMECUBE
+	ALERT( at_console, "*GameCube: world Precache post-bodyque\n" );
+#endif
 
 	// init sentence group playback stuff from sentences.txt.
 	// ok to call this multiple times, calls after first are ignored.
 	SENTENCEG_Init();
+#if XASH_GAMECUBE
+	ALERT( at_console, "*GameCube: world Precache post-sentenceg\n" );
+#endif
 
 	// the area based ambient sounds MUST be the first precache_sounds
 	// player precaches
 	W_Precache();				// get weapon precaches
+#if XASH_GAMECUBE
+	ALERT( at_console, "*GameCube: world Precache post-weapons\n" );
+#endif
 
 	ClientPrecache();
+#if XASH_GAMECUBE
+	ALERT( at_console, "*GameCube: world Precache post-client\n" );
+#endif
 
 	// sounds used from C physics code
 	PRECACHE_SOUND( "common/null.wav" );// clears sound channels
@@ -578,6 +612,13 @@ void CWorld::Precache( void )
 	// init the WorldGraph.
 	WorldGraph.InitGraph();
 
+#if XASH_GAMECUBE
+	/* Temporary bring-up path: GameCube disc boots do not yet have a reliable
+	 * read/write route for HL node graphs, and falling back to AllocNodes()
+	 * immediately blows MEM1. Skip graph load/build so gameplay startup can
+	 * continue while engine and filesystem porting catch up. */
+	ALERT( at_console, "*GameCube: skipping node graph build/load during port bring-up\n" );
+#else
 	// make sure the .NOD file is newer than the .BSP file.
 	if( !WorldGraph.CheckNODFile( STRING( gpGlobals->mapname ) ) )
 	{
@@ -598,6 +639,7 @@ void CWorld::Precache( void )
 			ALERT( at_console, "\n*Graph Loaded!\n" );
 		}
 	}
+#endif
 
 	if( pev->speed > 0 )
 		CVAR_SET_FLOAT( "sv_zmax", pev->speed );
@@ -716,4 +758,3 @@ void CWorld::KeyValue( KeyValueData *pkvd )
 	else
 		CBaseEntity::KeyValue( pkvd );
 }
-

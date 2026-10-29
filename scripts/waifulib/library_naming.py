@@ -39,6 +39,7 @@ DEFINES = [
 'XASH_E2K',
 'XASH_EMSCRIPTEN',
 'XASH_FREEBSD',
+'XASH_GAMECUBE',
 'XASH_HAIKU',
 'XASH_IOS',
 'XASH_IRIX',
@@ -101,6 +102,8 @@ def configure(conf):
 		buildos = "haiku"
 	elif conf.env.XASH_SERENITY:
 		buildos = "serenityos"
+	elif conf.env.XASH_GAMECUBE:
+		buildos = "gamecube"
 	elif conf.env.XASH_NSWITCH:
 		buildos = "nswitch"
 	elif conf.env.XASH_PSVITA:

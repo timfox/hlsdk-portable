@@ -334,6 +334,23 @@ void CBarney::HandleAnimEvent( MonsterEvent_t *pEvent )
 //=========================================================
 void CBarney::Spawn()
 {
+#if XASH_GAMECUBE
+	PRECACHE_MODEL( "models/barney.mdl" );
+	SET_MODEL( ENT( pev ), "models/barney.mdl" );
+	UTIL_SetSize( pev, VEC_HUMAN_HULL_MIN, VEC_HUMAN_HULL_MAX );
+	pev->solid = SOLID_SLIDEBOX;
+	pev->movetype = MOVETYPE_NONE;
+	pev->health = gSkillData.barneyHealth;
+	pev->view_ofs = Vector( 0.0f, 0.0f, 50.0f );
+	pev->body = BARNEY_BODY_GUNHOLSTERED;
+	pev->takedamage = DAMAGE_NO;
+	pev->nextthink = 0;
+	m_MonsterState = MONSTERSTATE_NONE;
+	m_fGunDrawn = FALSE;
+	ALERT( at_console, "Xash3D GameCube: G315 static Barney target=%s\n",
+		STRING( pev->targetname ) );
+	return;
+#else
 	Precache();
 
 	SET_MODEL( ENT( pev ), "models/barney.mdl" );
@@ -354,6 +371,7 @@ void CBarney::Spawn()
 
 	MonsterInit();
 	SetUse( &CTalkMonster::FollowerUse );
+#endif
 }
 
 //=========================================================

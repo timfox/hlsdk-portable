@@ -337,6 +337,12 @@ CBaseEntity *CBeam::RandomTargetname( const char *szName )
 
 void CBeam::DoSparks( const Vector &start, const Vector &end )
 {
+#if defined(__GAMECUBE__)
+	/* Lean: UTIL_Sparks tempents hung Host_Frame; beams still draw. */
+	if( g_engfuncs.CheckParm( (char *)"-gcnewgame", NULL )
+		&& !g_engfuncs.CheckParm( (char *)"-gcfullphysics", NULL ))
+		return;
+#endif
 	if( pev->spawnflags & ( SF_BEAM_SPARKSTART | SF_BEAM_SPARKEND ) )
 	{
 		if( pev->spawnflags & SF_BEAM_SPARKSTART )
@@ -483,6 +489,11 @@ void CLightning::Spawn( void )
 			SetThink( &CLightning::StrikeThink );
 			pev->nextthink = gpGlobals->time + 1.0f;
 		}
+#if defined(__GAMECUBE__)
+		/* Lean: c3a2 env_beams are TOGGLE+RANDOM (no STARTON) — retail waits
+		 * on Use. Do not arm StrikeThink here; Zap TE hung Host_Frame. Client
+		 * seeds GPU beams from admitted env_beam edicts after SCR ready. */
+#endif
 	}
 }
 
@@ -496,6 +507,14 @@ void CLightning::Activate( void )
 {
 	if( ServerSide() )
 		BeamUpdateVars();
+#if defined(__GAMECUBE__)
+	else if( g_engfuncs.CheckParm( (char *)"-gcnewgame", NULL )
+		&& !g_engfuncs.CheckParm( (char *)"-gcfullphysics", NULL ))
+	{
+		/* Marker only — client CL_GCTrySeedLeanBeamProof scans edicts. */
+		ALERT( at_console, "*GameCube: env_beam lean Activate (client seed)\n" );
+	}
+#endif
 }
 
 void CLightning::KeyValue( KeyValueData *pkvd )
@@ -614,6 +633,24 @@ int IsPointEntity( CBaseEntity *pEnt )
 
 void CLightning::StrikeThink( void )
 {
+#if defined(__GAMECUBE__)
+	/* Lean: Zap/RandomArea TE hung Host_Frame on reactor maps (probe
+	 * 20260809-010048). Client seeds map beams from env_beam edicts. */
+	if( g_engfuncs.CheckParm( (char *)"-gcnewgame", NULL )
+		&& !g_engfuncs.CheckParm( (char *)"-gcfullphysics", NULL ))
+	{
+		static int gc_beam_strike_logged;
+
+		pev->nextthink = 0;
+		m_active = 1;
+		if( !gc_beam_strike_logged )
+		{
+			gc_beam_strike_logged = 1;
+			ALERT( at_console, "*GameCube: env_beam StrikeThink lean (no Zap)\n" );
+		}
+		return;
+	}
+#endif
 	if( m_life != 0 )
 	{
 		if( pev->spawnflags & SF_BEAM_RANDOM )
@@ -729,6 +766,11 @@ void CBeam::BeamDamage( TraceResult *ptr )
 			ApplyMultiDamage( pev, pev );
 			if( pev->spawnflags & SF_BEAM_DECALS )
 			{
+#if defined(__GAMECUBE__)
+				/* Lean: UTIL_DecalTrace hung (same class as DecalGunshot). */
+				if( !( g_engfuncs.CheckParm( (char *)"-gcnewgame", NULL )
+					&& !g_engfuncs.CheckParm( (char *)"-gcfullphysics", NULL )) )
+#endif
 				if( pHit->IsBSPModel() )
 					UTIL_DecalTrace( ptr, DECAL_BIGSHOT1 + RANDOM_LONG( 0, 4 ) );
 			}
@@ -739,6 +781,15 @@ void CBeam::BeamDamage( TraceResult *ptr )
 
 void CLightning::DamageThink( void )
 {
+#if defined(__GAMECUBE__)
+	/* Lean: per-beam DamageThink TraceLine/decal spam hung reactor maps. */
+	if( g_engfuncs.CheckParm( (char *)"-gcnewgame", NULL )
+		&& !g_engfuncs.CheckParm( (char *)"-gcfullphysics", NULL ))
+	{
+		pev->nextthink = 0;
+		return;
+	}
+#endif
 	pev->nextthink = gpGlobals->time + 0.1f;
 	TraceResult tr;
 	UTIL_TraceLine( GetStartPos(), GetEndPos(), dont_ignore_monsters, NULL, &tr );
@@ -955,6 +1006,13 @@ void CLaser::Spawn( void )
 
 	PointsInit( pev->origin, pev->origin );
 
+#if defined(__GAMECUBE__)
+	/* Lean: end-glow SpriteCreate OOMed like map env_sprite; beam body is enough. */
+	if( g_engfuncs.CheckParm( (char *)"-gcnewgame", NULL )
+		&& !g_engfuncs.CheckParm( (char *)"-gcfullphysics", NULL ))
+		m_pSprite = NULL;
+	else
+#endif
 	if( !m_pSprite && m_iszSpriteName )
 		m_pSprite = CSprite::SpriteCreate( STRING( m_iszSpriteName ), pev->origin, TRUE );
 	else
@@ -1080,6 +1138,36 @@ void CLaser::StrikeThink( void )
 		m_firePosition = pEnd->pev->origin;
 
 	TraceResult tr;
+
+#if defined(__GAMECUBE__)
+	/* Lean: hull world-only TraceLine; skip sparks/decals (FireAtPoint). */
+	if( g_engfuncs.CheckParm( (char *)"-gcnewgame", NULL )
+		&& !g_engfuncs.CheckParm( (char *)"-gcfullphysics", NULL ))
+	{
+		static int gc_laser_logged;
+		float start[3], end[3];
+
+		start[0] = pev->origin[0];
+		start[1] = pev->origin[1];
+		start[2] = pev->origin[2];
+		end[0] = m_firePosition[0];
+		end[1] = m_firePosition[1];
+		end[2] = m_firePosition[2];
+		memset( &tr, 0, sizeof( tr ));
+		g_engfuncs.pfnTraceLine( start, end, 0, NULL, &tr );
+		SetEndPos( tr.vecEndPos );
+		if( m_pSprite )
+			UTIL_SetOrigin( m_pSprite->pev, tr.vecEndPos );
+		if( !gc_laser_logged )
+		{
+			gc_laser_logged = 1;
+			ALERT( at_console, "*GameCube: env_laser StrikeThink fraction=%.3f\n",
+				tr.flFraction );
+		}
+		pev->nextthink = gpGlobals->time + 0.1f;
+		return;
+	}
+#endif
 
 	UTIL_TraceLine( pev->origin, m_firePosition, dont_ignore_monsters, NULL, &tr );
 	FireAtPoint( tr );

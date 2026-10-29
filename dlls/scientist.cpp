@@ -635,6 +635,22 @@ void CScientist::Spawn( void )
 		pev->body = RANDOM_LONG( 0, NUM_SCIENTIST_HEADS - 1 );// pick a head, any head
 	}
 
+#if XASH_GAMECUBE
+	PRECACHE_MODEL( GetScientistModel() );
+	SET_MODEL( ENT( pev ), GetScientistModel() );
+	UTIL_SetSize( pev, VEC_HUMAN_HULL_MIN, VEC_HUMAN_HULL_MAX );
+	pev->solid = SOLID_NOT;
+	pev->movetype = MOVETYPE_NONE;
+	pev->health = gSkillData.scientistHealth;
+	pev->view_ofs = Vector( 0, 0, 50 );
+	pev->skin = pev->body == HEAD_LUTHER ? 1 : 0;
+	pev->takedamage = DAMAGE_NO;
+	pev->nextthink = 0;
+	m_MonsterState = MONSTERSTATE_NONE;
+	ALERT( at_console, "Xash3D GameCube: G316 static scientist target=%s\n",
+		STRING( pev->targetname ) );
+	return;
+#else
 	Precache();
 
 	SET_MODEL( ENT( pev ), GetScientistModel());
@@ -667,6 +683,7 @@ void CScientist::Spawn( void )
 
 	MonsterInit();
 	SetUse( &CTalkMonster::FollowerUse );
+#endif
 }
 
 //=========================================================
@@ -1302,6 +1319,21 @@ void CSittingScientist::Spawn()
 {
 	PRECACHE_MODEL( "models/scientist.mdl" );
 	SET_MODEL( ENT( pev ), "models/scientist.mdl" );
+#if XASH_GAMECUBE
+	// The map-load studio placeholder has no named sequences or bone
+	// controllers. Keep seated predisaster scientists as static, script-visible
+	// actors until their lean real mesh can be promoted after Flipper startup.
+	UTIL_SetSize( pev, Vector( -14, -14, 0 ), Vector( 14, 14, 36 ) );
+	pev->solid = SOLID_NOT;
+	pev->movetype = MOVETYPE_NONE;
+	pev->effects = 0;
+	pev->health = 50;
+	pev->takedamage = DAMAGE_NO;
+	pev->nextthink = 0;
+	SetBits( pev->spawnflags, SF_MONSTER_PREDISASTER );
+	ALERT( at_console, "Xash3D GameCube: G314 static sitting scientist\n" );
+	return;
+#endif
 	Precache();
 	InitBoneControllers();
 

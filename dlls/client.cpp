@@ -192,18 +192,47 @@ void ClientPutInServer( edict_t *pEntity )
 
 	entvars_t *pev = &pEntity->v;
 
+	#if defined(__GAMECUBE__)
+	ALERT( at_console, "*GameCube: ClientPutInServer stage=classptr begin\n" );
+	#endif
 	pPlayer = GetClassPtr( (CBasePlayer *)pev );
+	#if defined(__GAMECUBE__)
+	ALERT( at_console, "*GameCube: ClientPutInServer stage=classptr ready\n" );
+	#endif
 	pPlayer->SetCustomDecalFrames( -1 ); // Assume none;
+	#if defined(__GAMECUBE__)
+	ALERT( at_console, "*GameCube: ClientPutInServer stage=decal ready\n" );
+	#endif
 	pPlayer->SetPrefsFromUserinfo( g_engfuncs.pfnGetInfoKeyBuffer( pEntity ) );
+	#if defined(__GAMECUBE__)
+	ALERT( at_console, "*GameCube: ClientPutInServer stage=userinfo ready\n" );
+	ALERT( at_console, "*GameCube: ClientPutInServer stage=spawn begin\n" );
+	#endif
 
 	// Allocate a CBasePlayer for pev, and call spawn
 	pPlayer->Spawn();
+	#if defined(__GAMECUBE__)
+	ALERT( at_console, "*GameCube: ClientPutInServer stage=spawn ready\n" );
+	if( g_engfuncs.CheckParm( (char *)"-gcnewgame", NULL )
+		|| g_engfuncs.CheckParm( (char *)"-gcmenuplaystart", NULL ))
+	{
+		/* The normal PlayerSpawn gamerules dispatch is unsafe on the static
+		 * GameCube ABI. Crowbar GiveNamedItem softlocks after G326 pre-map
+		 * client keep (20260810-002542: hang before SV_SetModel w_crowbar).
+		 * Inventory is planted later via G103/G120 landmark path.
+		 * Menu New Game (-gcmenuplaystart) hits the same softlock. */
+		ALERT( at_console, "*GameCube: ClientPutInServer stage=crowbar skipped (G326)\n" );
+	}
+	#endif
 
 	// Reset interpolation during first frame
 	pPlayer->pev->effects |= EF_NOINTERP;
 
 	pPlayer->pev->iuser1 = 0;
 	pPlayer->pev->iuser2 = 0;
+	#if defined(__GAMECUBE__)
+	ALERT( at_console, "*GameCube: ClientPutInServer stage=complete\n" );
+	#endif
 }
 
 #if !NO_VOICEGAMEMGR
