@@ -147,17 +147,20 @@ void CGenericMonster::Spawn()
 	m_MonsterState = MONSTERSTATE_NONE;
 
 #if XASH_GAMECUBE
-	// GameCube maps use a shared studio stub at spawn time. Running
-	// MonsterInit against that one-frame placeholder leaves MonsterThink in the
-	// studio sequence loop before the Flipper present can arm. The c0a0 generic
-	// actors are static forklift props; keep their entity/model/solid state for
-	// scripted targeting without scheduling autonomous monster AI.
-	pev->takedamage = DAMAGE_NO;
-	pev->movetype = MOVETYPE_NONE;
-	pev->nextthink = 0;
-	ALERT( at_console, "Xash3D GameCube: G313 static monster_generic model=%s\n",
-		STRING( pev->model ) );
-	return;
+	if( !GC_FullActors())
+	{
+		// GameCube maps use a shared studio stub at spawn time. Running
+		// MonsterInit against that one-frame placeholder leaves MonsterThink in the
+		// studio sequence loop before the Flipper present can arm. The c0a0 generic
+		// actors are static forklift props; keep their entity/model/solid state for
+		// scripted targeting without scheduling autonomous monster AI.
+		pev->takedamage = DAMAGE_NO;
+		pev->movetype = MOVETYPE_NONE;
+		pev->nextthink = 0;
+		ALERT( at_console, "Xash3D GameCube: G313 static monster_generic model=%s\n",
+			STRING( pev->model ) );
+		return;
+	}
 #endif
 
 	MonsterInit();

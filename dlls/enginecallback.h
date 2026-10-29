@@ -160,4 +160,16 @@ inline void *GET_PRIVATE( edict_t *pent )
 
 #define PLAYER_CNX_STATS		( *g_engfuncs.pfnGetPlayerStats )
 
+#if XASH_GAMECUBE
+// Menu New Game runs the real server with the intro BSP resident: actors
+// spawn with full AI, scripts and animation there. Other GameCube routes
+// keep the lean static actors.
+inline BOOL GC_FullActors( void )
+{
+	return g_engfuncs.CheckParm( (char *)"-gcmenuplaystart", NULL )
+		&& !g_engfuncs.CheckParm( (char *)"-gcmenunoserver", NULL )
+		&& !g_engfuncs.CheckParm( (char *)"-gcfullphysics", NULL );
+}
+#endif
+
 #endif		//ENGINECALLBACK_H
