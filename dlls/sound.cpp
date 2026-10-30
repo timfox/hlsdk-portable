@@ -1249,11 +1249,16 @@ void SENTENCEG_Init()
 #if XASH_GAMECUBE
 	/* G381: sentences.txt load/parse + large name-table clear hangs on cold
 	 * tram→AM changelevel discs (c0a0e→c1a0, post-bodyque). Sentence groups
-	 * are optional for campaign continuity bring-up. */
-	fSentencesInit = TRUE;
-	gcallsentences = 0;
-	ALERT( at_console, "*GameCube: skipping SENTENCEG_Init during port bring-up\n" );
-	return;
+	 * are optional for campaign continuity bring-up. The menu New Game route
+	 * runs the full cast, and calls this from GameDLLInit while the heap has
+	 * room for the file. */
+	if( !GC_FullActors())
+	{
+		fSentencesInit = TRUE;
+		gcallsentences = 0;
+		ALERT( at_console, "*GameCube: skipping SENTENCEG_Init during port bring-up\n" );
+		return;
+	}
 #endif
 
 	memset( gszallsentencenames, 0, CVOXFILESENTENCEMAX * CBSENTENCENAME_MAX );
