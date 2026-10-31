@@ -616,8 +616,13 @@ void CWorld::Precache( void )
 	/* Temporary bring-up path: GameCube disc boots do not yet have a reliable
 	 * read/write route for HL node graphs, and falling back to AllocNodes()
 	 * immediately blows MEM1. Skip graph load/build so gameplay startup can
-	 * continue while engine and filesystem porting catch up. */
-	ALERT( at_console, "*GameCube: skipping node graph build/load during port bring-up\n" );
+	 * continue while engine and filesystem porting catch up.
+	 * The menu New Game route loads the retail .nod (10-20 KB, read only):
+	 * scripted walks need it, and Barney's at c0a0e opens the tram door. */
+	if( GC_FullActors() && WorldGraph.FLoadGraph( STRING( gpGlobals->mapname )))
+		ALERT( at_console, "*GameCube: graph loaded nodes=%d links=%d\n", WorldGraph.m_cNodes, WorldGraph.m_cLinks );
+	else
+		ALERT( at_console, "*GameCube: skipping node graph build/load during port bring-up\n" );
 #else
 	// make sure the .NOD file is newer than the .BSP file.
 	if( !WorldGraph.CheckNODFile( STRING( gpGlobals->mapname ) ) )
