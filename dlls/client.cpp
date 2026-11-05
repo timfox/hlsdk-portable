@@ -216,12 +216,10 @@ void ClientPutInServer( edict_t *pEntity )
 	if( g_engfuncs.CheckParm( (char *)"-gcnewgame", NULL )
 		|| g_engfuncs.CheckParm( (char *)"-gcmenuplaystart", NULL ))
 	{
-		/* The normal PlayerSpawn gamerules dispatch is unsafe on the static
-		 * GameCube ABI. Crowbar GiveNamedItem softlocks after G326 pre-map
-		 * client keep (20260810-002542: hang before SV_SetModel w_crowbar).
-		 * Inventory is planted later via G103/G120 landmark path.
-		 * Menu New Game (-gcmenuplaystart) hits the same softlock. */
-		ALERT( at_console, "*GameCube: ClientPutInServer stage=crowbar skipped (G326)\n" );
+		/* The early PlayerSpawn gamerules dispatch is unsafe on the static
+		 * GameCube ABI. The engine re-arms the retail crowbar immediately
+		 * after this callback through its safe post-spawn create/touch path. */
+		ALERT( at_console, "*GameCube: ClientPutInServer stage=crowbar deferred (G326)\n" );
 	}
 	#endif
 

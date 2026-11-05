@@ -1247,11 +1247,9 @@ void SENTENCEG_Init()
 		return;
 
 #if XASH_GAMECUBE
-	/* G381: sentences.txt load/parse + large name-table clear hangs on cold
-	 * tram→AM changelevel discs (c0a0e→c1a0, post-bodyque). Sentence groups
-	 * are optional for campaign continuity bring-up. The menu New Game route
-	 * runs the full cast, and calls this from GameDLLInit while the heap has
-	 * room for the file. */
+	/* The retail play profile explicitly requests full actors. Keep sentence
+	 * playback available there; the lean diagnostic route has no sentence
+	 * consumers and can defer its table initialization. */
 	if( !GC_FullActors())
 	{
 		fSentencesInit = TRUE;
@@ -1261,7 +1259,9 @@ void SENTENCEG_Init()
 	}
 #endif
 
-	memset( gszallsentencenames, 0, CVOXFILESENTENCEMAX * CBSENTENCENAME_MAX );
+	/* gszallsentencenames is static storage and starts zeroed. Parsed entries
+	 * are bounded by gcallsentences, so clearing the entire 4096-name table on
+	 * every map adds a large avoidable MEM1 write without changing semantics. */
 	gcallsentences = 0;
 
 	memset( rgsentenceg, 0, CSENTENCEG_MAX * sizeof(SENTENCEG) );

@@ -166,9 +166,14 @@ inline void *GET_PRIVATE( edict_t *pent )
 // keep the lean static actors.
 inline BOOL GC_FullActors( void )
 {
-	return g_engfuncs.CheckParm( (char *)"-gcmenuplaystart", NULL )
-		&& !g_engfuncs.CheckParm( (char *)"-gcmenunoserver", NULL )
-		&& !g_engfuncs.CheckParm( (char *)"-gcfullphysics", NULL );
+	if( g_engfuncs.CheckParm( (char *)"-gcmenunoserver", NULL ))
+		return FALSE;
+
+	/* An explicit full-actors request is authoritative even when paired with
+	 * full physics. The old final -gcfullphysics veto silently disabled retail
+	 * AI sound, sentence groups, and node graphs in the normal play profile. */
+	return g_engfuncs.CheckParm( (char *)"-gcfullactors", NULL )
+		|| g_engfuncs.CheckParm( (char *)"-gcmenuplaystart", NULL );
 }
 #endif
 

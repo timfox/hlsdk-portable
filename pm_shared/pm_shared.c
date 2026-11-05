@@ -3420,9 +3420,15 @@ int PM_GetPhysEntInfo( int ent )
 
 void PM_Init( struct playermove_s *ppmove )
 {
-	assert( !pm_shared_initialized );
-
 	pmove = ppmove;
+
+	/* GameCube statically links client+server into one DOL. COM_FreeLibrary
+	 * does not reset BSS, so a second HUD_PlayerMoveInit (menu New Game
+	 * unload→reload) would trip assert(!pm_shared_initialized) and hang after
+	 * hull setup (probe 20261104-044439). Re-bind pmove and skip one-shot
+	 * tables when already initialized. */
+	if( pm_shared_initialized )
+		return;
 
 	PM_CreateStuckTable();
 	PM_InitTextureTypes();

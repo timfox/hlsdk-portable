@@ -205,13 +205,14 @@ LINK_ENTITY_TO_CLASS( bodyque, CCorpse )
 static void InitBodyQue( void )
 {
 #if XASH_GAMECUBE
-	/* G381 follow-up: CREATE_NAMED_ENTITY(bodyque)×4 can hang under MEM1
-	 * tip pressure on cold tram→AM changelevel discs (c0a0e→c1a0). Corpses
-	 * are optional for campaign continuity bring-up. */
-	g_pBodyQueueHead = NULL;
-	ALERT( at_console, "*GameCube: skipping InitBodyQue during port bring-up\n" );
-	return;
-#else
+	/* Lean diagnostic routes can omit corpse slots; the retail full-actor route
+	 * keeps the standard four body-queue edicts. */
+	if( !GC_FullActors() )
+	{
+		g_pBodyQueueHead = NULL;
+		return;
+	}
+#endif
 	string_t istrClassname = MAKE_STRING( "bodyque" );
 
 	g_pBodyQueueHead = CREATE_NAMED_ENTITY( istrClassname );
@@ -225,7 +226,6 @@ static void InitBodyQue( void )
 	}
 
 	pev->owner = g_pBodyQueueHead;
-#endif
 }
 
 //
@@ -493,23 +493,31 @@ void CWorld::Precache( void )
 	///!!!LATER - do we want a sound ent in deathmatch? (sjb)
 	//pSoundEnt = CBaseEntity::Create( "soundent", g_vecZero, g_vecZero, edict() );
 #if XASH_GAMECUBE
-	/* G381: GetClassPtr(CSoundEnt) hangs on cold tram tip under MEM1 pressure
-	 * (c0a0e Dolphin probes). AI sound queue is optional for bring-up; ambient
-	 * still uses ambient_generic. */
-	pSoundEnt = NULL;
-	ALERT( at_console, "*GameCube: skipping CSoundEnt create during port bring-up\n" );
-#else
-	pSoundEnt = GetClassPtr( ( CSoundEnt *)NULL );
-
-	if( pSoundEnt )
+	BOOL gc_full_actors = GC_FullActors();
+	ALERT( at_console, "*GameCube: world Precache full-actors=%d menuplaystart=%d fullactors=%d\n",
+		gc_full_actors,
+		g_engfuncs.CheckParm( (char *)"-gcmenuplaystart", NULL ) != 0,
+		g_engfuncs.CheckParm( (char *)"-gcfullactors", NULL ) != 0 );
+	if( !gc_full_actors )
 	{
-		pSoundEnt->Spawn();
+		pSoundEnt = NULL;
 	}
 	else
-	{
-		ALERT ( at_console, "**COULD NOT CREATE SOUNDENT**\n" );
-	}
 #endif
+	{
+		pSoundEnt = GetClassPtr( ( CSoundEnt *)NULL );
+
+		if( pSoundEnt )
+		{
+			pSoundEnt->Spawn();
+			ALERT( at_console, "*GameCube: world Precache soundent ready ent=%d private=%p\n",
+				ENTINDEX( pSoundEnt->edict() ), pSoundEnt );
+		}
+		else
+		{
+			ALERT ( at_console, "**COULD NOT CREATE SOUNDENT**\n" );
+		}
+	}
 
 #if XASH_GAMECUBE
 	ALERT( at_console, "*GameCube: world Precache post-soundent\n" );

@@ -1906,7 +1906,37 @@ void CBaseMonster::Move( float flInterval )
 				else
 				{
 					TaskFail();
-					ALERT( at_aiconsole, "%s Failed to move (%d)!\n", STRING( pev->classname ), HasMemory( bits_MEMORY_MOVE_FAILED ) );
+					static int gc_move_blocker_logs;
+					if( gc_move_blocker_logs < 8 )
+					{
+						edict_t *blocker = gpGlobals->trace_ent;
+						const char *blocker_class = blocker && blocker->v.classname
+							? STRING( blocker->v.classname ) : "(none)";
+						const char *blocker_name = blocker && blocker->v.targetname
+							? STRING( blocker->v.targetname ) : "";
+						ALERT( at_aiconsole,
+							"%s GC movement blocker=%s targetname=%s at=(%.0f %.0f %.0f) solid=%d flags=0x%x ground=%d\n",
+							STRING( pev->classname ), blocker_class, blocker_name,
+							blocker ? blocker->v.origin[0] : 0.0f,
+							blocker ? blocker->v.origin[1] : 0.0f,
+							blocker ? blocker->v.origin[2] : 0.0f,
+							blocker ? (int)blocker->v.solid : -1,
+							blocker ? (unsigned int)blocker->v.flags : 0u,
+							blocker ? ENTINDEX( blocker ) : -1 );
+						gc_move_blocker_logs++;
+					}
+					ALERT( at_aiconsole,
+						"%s Failed to move (%d)! target=%s schedule=%s task=%d origin=(%.0f %.0f %.0f) goal=(%.0f %.0f %.0f) waypoint=%d/%d next=(%.0f %.0f %.0f)\n",
+						STRING( pev->classname ), HasMemory( bits_MEMORY_MOVE_FAILED ),
+						STRING( pev->targetname ),
+						m_pSchedule && m_pSchedule->pName ? m_pSchedule->pName : "none",
+						GetTask() ? GetTask()->iTask : -1,
+						pev->origin.x, pev->origin.y, pev->origin.z,
+						m_vecMoveGoal.x, m_vecMoveGoal.y, m_vecMoveGoal.z,
+						m_iRouteIndex, ROUTE_SIZE,
+						m_iRouteIndex >= 0 && m_iRouteIndex < ROUTE_SIZE ? m_Route[m_iRouteIndex].vecLocation.x : 0.0f,
+						m_iRouteIndex >= 0 && m_iRouteIndex < ROUTE_SIZE ? m_Route[m_iRouteIndex].vecLocation.y : 0.0f,
+						m_iRouteIndex >= 0 && m_iRouteIndex < ROUTE_SIZE ? m_Route[m_iRouteIndex].vecLocation.z : 0.0f );
 					//ALERT( at_aiconsole, "%f, %f, %f\n", pev->origin.z, ( pev->origin + ( vecDir * flCheckDist ) ).z, m_Route[m_iRouteIndex].vecLocation.z );
 				}
 				return;
