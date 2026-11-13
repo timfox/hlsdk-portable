@@ -51,6 +51,7 @@ void CHudMenu::InitHUDData( void )
 {
 	m_fMenuDisplayed = 0;
 	m_bitsValidSlots = 0;
+	m_iGCSelectedSlot = 1;
 	m_iFlags &= ~HUD_ACTIVE;
 	Reset();
 }
@@ -194,10 +195,14 @@ int CHudMenu::Draw( float flTime )
 			while( *sptr != '\0' && *sptr != '\n' && *sptr != '\\' )
 				sptr++;
 			strlcpy( menubuf, ptr, Q_min(( sptr - ptr + 1 ), (int)sizeof( menubuf )));
+			int draw_r = menu_r, draw_g = menu_g, draw_b = menu_b;
+			if( menubuf[0] >= '1' && menubuf[0] <= '9' && menubuf[1] == '.'
+				&& menubuf[0] - '0' == m_iGCSelectedSlot )
+			{ draw_r = 96; draw_g = 255; draw_b = 128; }
 			if( menu_ralign )
 				// IMPORTANT: Right-to-left rendered text does not parse escape tokens!
-				menu_x = gHUD.DrawHudStringReverse( menu_x, y, 0, menubuf, menu_r, menu_g, menu_b );
-			else menu_x = gHUD.DrawHudString( menu_x, y, 320, menubuf, menu_r, menu_g, menu_b );
+				menu_x = gHUD.DrawHudStringReverse( menu_x, y, 0, menubuf, draw_r, draw_g, draw_b );
+			else menu_x = gHUD.DrawHudString( menu_x, y, 320, menubuf, draw_r, draw_g, draw_b );
 		}
 	}
 
@@ -247,6 +252,9 @@ int CHudMenu::MsgFunc_ShowMenu( const char *pszName, int iSize, void *pbuf )
 		if( !m_fWaitingForMore ) // this is the start of a new menu
 		{
 			strlcpy( g_szPrelocalisedMenuString, READ_STRING(), MAX_MENU_STRING );
+			for( m_iGCSelectedSlot = 1; m_iGCSelectedSlot <= 10; ++m_iGCSelectedSlot )
+				if( m_bitsValidSlots & ( 1 << ( m_iGCSelectedSlot - 1 ))) break;
+			if( m_iGCSelectedSlot > 10 ) m_iGCSelectedSlot = 1;
 		}
 		else
 		{

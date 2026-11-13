@@ -24,6 +24,7 @@ extern "C"
 #include "const.h"
 #include "camera.h"
 #include "in_defs.h"
+#include "keydefs.h"
 //#include "view.h"
 #include <string.h>
 #include <ctype.h>
@@ -420,6 +421,29 @@ Return 1 to allow engine to process the key, otherwise, act on it as needed
 */
 int DLLEXPORT HUD_Key_Event( int down, int keynum, const char *pszCurrentBinding )
 {
+#if XASH_GAMECUBE
+	if( gHUD.m_Menu.m_fMenuDisplayed )
+	{
+		CHudMenu *menu = &gHUD.m_Menu;
+		int slot = menu->m_iGCSelectedSlot;
+		int step = keynum == K_DPAD_UP ? -1 : 1;
+		if( down && ( keynum == K_DPAD_UP || keynum == K_DPAD_DOWN ))
+		{
+			int tries;
+			for( tries = 0; tries < 10; ++tries )
+			{
+				slot = (( slot - 1 + step + 10 ) % 10 ) + 1;
+				if( menu->m_bitsValidSlots & ( 1 << ( slot - 1 )))
+				{ menu->m_iGCSelectedSlot = slot; break; }
+			}
+			return 0;
+		}
+		if( down && ( keynum == K_A_BUTTON || keynum == K_ENTER || keynum == K_KP_ENTER ))
+		{ menu->SelectMenuItem( slot ); return 0; }
+		if( down && keynum >= '1' && keynum <= '9' )
+		{ menu->SelectMenuItem( keynum - '0' ); return 0; }
+	}
+#endif
 #if USE_VGUI
 	if (gViewPort)
 		return gViewPort->KeyInput(down, keynum, pszCurrentBinding);

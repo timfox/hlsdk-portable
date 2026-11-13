@@ -539,6 +539,26 @@ void CHalfLifeMultiplay::PlayerSpawn( CBasePlayer *pPlayer )
 
 	if( addDefault )
 	{
+#if defined(__GAMECUBE__)
+		/* Peer BBA PutInServer under tip MEM1: GiveNamedItem → SET_MODEL for
+		 * w_/v_ studios hangs after the first crowbar stub (dual IPC
+		 * 20261107-091651 never reached ClientPutInServer stage=spawn ready /
+		 * SignonReply 2). CapFaces listen has no DoD weapon ents in the HL1
+		 * deathmatch SDK — grant crowbar for fire; Flipper binds team VMs
+		 * (v_garand / v_mp40) from CapFaces viewmodel path. */
+			if( g_engfuncs.CheckParm( (char *)"-gclistenserver", NULL )
+			|| g_engfuncs.CheckParm( (char *)"-gcconnect", NULL )
+			|| g_engfuncs.CheckParm( (char *)"-gcmap", NULL ) )
+		{
+			/* CapFaces geo densify: weapon grant (crowbar/9mm) regressed caen
+			 * to ~14% pure-white voids vs dense8 suit-only (0.07%). Keep
+			 * suit-only while baking all-geo; re-enable fire/EFX separately. */
+			ALERT( at_console, "*GameCube: PlayerSpawn suit-only (skip weapon grant)\n" );
+			(void)0; /* was: CapFaces fire weapon + team VM under -gcworldrender */
+			pPlayer->m_iAutoWepSwitch = iOldAutoWepSwitch;
+			return;
+		}
+#endif
 		pPlayer->GiveNamedItem( "weapon_crowbar" );
 		pPlayer->GiveNamedItem( "weapon_9mmhandgun" );
 		pPlayer->GiveAmmo( 68, "9mm", _9MM_MAX_CARRY );// 4 full reloads

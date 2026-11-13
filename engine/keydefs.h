@@ -80,6 +80,14 @@
 #define K_JOY3		205
 #define K_JOY4		206
 
+/* Xash3D GameCube pad keys (must match engine/keydefs.h). */
+#define K_A_BUTTON	207
+#define K_B_BUTTON	208
+#define K_DPAD_UP	222
+#define K_DPAD_DOWN	223
+#define K_DPAD_LEFT	224
+#define K_DPAD_RIGHT	225
+
 //
 // aux keys are for multi-buttoned joysticks to generate so they can use
 // the normal binding process

@@ -23,6 +23,7 @@ def build(bld):
 	excluded_files = ['mpstubb.cpp', 'stats.cpp', 'Wxdebug.cpp']
 
 	source = bld.path.ant_glob('**/*.cpp', excl=excluded_files)
+	source += bld.path.ant_glob('dod_game.c')
 	source += bld.path.parent.ant_glob(['pm_shared/*.c', 'public/safe_snprintf.c'])
 
 	defines = bld.env.EXPORT_DEFINES_LIST

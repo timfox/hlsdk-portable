@@ -22,6 +22,7 @@
 #include "nodes.h"
 #include "player.h"
 #include "gamerules.h"
+#include "dod_game.h"
 
 #if !CLIENT_DLL
 #define BOLT_AIR_VELOCITY	2000
@@ -282,6 +283,8 @@ void CCrossbow::Precache( void )
 	PRECACHE_MODEL( "models/w_crossbow.mdl" );
 	PRECACHE_MODEL( "models/v_crossbow.mdl" );
 	PRECACHE_MODEL( "models/p_crossbow.mdl" );
+	PRECACHE_MODEL( "models/v_spring.mdl" ); PRECACHE_MODEL( "models/p_spring.mdl" );
+	PRECACHE_MODEL( "models/v_scoped98k.mdl" ); PRECACHE_MODEL( "models/p_k98.mdl" );
 
 	PRECACHE_SOUND( "weapons/xbow_fire1.wav" );
 	PRECACHE_SOUND( "weapons/xbow_reload1.wav" );
@@ -310,6 +313,9 @@ int CCrossbow::GetItemInfo( ItemInfo *p )
 
 BOOL CCrossbow::Deploy()
 {
+	const char *viewModel, *playerModel;
+	if( Dod_GameIsActive() && Dod_GetWeaponModels( m_pPlayer->entindex(), DOD_MODEL_SNIPER, &viewModel, &playerModel ) )
+		return DefaultDeploy( viewModel, playerModel, m_iClip ? CROSSBOW_DRAW1 : CROSSBOW_DRAW2, "bow" );
 	if( m_iClip )
 		return DefaultDeploy( "models/v_crossbow.mdl", "models/p_crossbow.mdl", CROSSBOW_DRAW1, "bow" );
 	return DefaultDeploy( "models/v_crossbow.mdl", "models/p_crossbow.mdl", CROSSBOW_DRAW2, "bow" );

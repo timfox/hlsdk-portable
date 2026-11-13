@@ -359,6 +359,7 @@ public:
 	int m_bitsValidSlots;
 	float m_flShutoffTime;
 	int m_fWaitingForMore;
+	int m_iGCSelectedSlot;
 };
 
 //

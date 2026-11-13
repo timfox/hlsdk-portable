@@ -21,6 +21,7 @@
 #include "nodes.h"
 #include "player.h"
 #include "gamerules.h"
+#include "dod_game.h"
 
 #define	CROWBAR_BODYHIT_VOLUME 128
 #define	CROWBAR_WALLHIT_VOLUME 512
@@ -61,6 +62,11 @@ void CCrowbar::Precache( void )
 	PRECACHE_MODEL( "models/v_crowbar.mdl" );
 	PRECACHE_MODEL( "models/w_crowbar.mdl" );
 	PRECACHE_MODEL( "models/p_crowbar.mdl" );
+	PRECACHE_MODEL( "models/v_amerk.mdl" ); PRECACHE_MODEL( "models/p_amerk.mdl" );
+	PRECACHE_MODEL( "models/v_spade.mdl" );
+	PRECACHE_MODEL( "models/p_spade.mdl" );
+	PRECACHE_MODEL( "models/v_spade.mdl" );
+	PRECACHE_MODEL( "models/p_spade.mdl" );
 	PRECACHE_SOUND( "weapons/cbar_hit1.wav" );
 	PRECACHE_SOUND( "weapons/cbar_hit2.wav" );
 	PRECACHE_SOUND( "weapons/cbar_hitbod1.wav" );
@@ -100,6 +106,9 @@ int CCrowbar::AddToPlayer( CBasePlayer *pPlayer )
 
 BOOL CCrowbar::Deploy()
 {
+	const char *viewModel, *playerModel;
+	if( Dod_GameIsActive() && Dod_GetWeaponModels( m_pPlayer->entindex(), DOD_MODEL_MELEE, &viewModel, &playerModel ) )
+		return DefaultDeploy( viewModel, playerModel, CROWBAR_DRAW, "crowbar" );
 	return DefaultDeploy( "models/v_crowbar.mdl", "models/p_crowbar.mdl", CROWBAR_DRAW, "crowbar" );
 }
 

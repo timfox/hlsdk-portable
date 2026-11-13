@@ -22,6 +22,7 @@
 #include "player.h"
 #include "soundent.h"
 #include "gamerules.h"
+#include "dod_game.h"
 
 enum mp5_e
 {
@@ -69,6 +70,12 @@ void CMP5::Precache( void )
 	PRECACHE_MODEL( "models/v_9mmAR.mdl" );
 	PRECACHE_MODEL( "models/w_9mmAR.mdl" );
 	PRECACHE_MODEL( "models/p_9mmAR.mdl" );
+	PRECACHE_MODEL( "models/v_garand.mdl" ); PRECACHE_MODEL( "models/p_garand.mdl" );
+	PRECACHE_MODEL( "models/v_98k.mdl" ); PRECACHE_MODEL( "models/p_k98.mdl" );
+	PRECACHE_MODEL( "models/v_tommy.mdl" ); PRECACHE_MODEL( "models/p_tommy.mdl" );
+	PRECACHE_MODEL( "models/v_mp40.mdl" ); PRECACHE_MODEL( "models/p_mp40.mdl" );
+	PRECACHE_MODEL( "models/v_30cal.mdl" ); PRECACHE_MODEL( "models/p_30cal.mdl" );
+	PRECACHE_MODEL( "models/v_mg42.mdl" ); PRECACHE_MODEL( "models/p_mg42pr.mdl" );
 
 	m_iShell = PRECACHE_MODEL( "models/shell.mdl" );// brass shellTE_MODEL
 
@@ -124,6 +131,9 @@ int CMP5::AddToPlayer( CBasePlayer *pPlayer )
 
 BOOL CMP5::Deploy()
 {
+	const char *viewModel, *playerModel;
+	if( Dod_GameIsActive() && Dod_GetWeaponModels( m_pPlayer->entindex(), DOD_MODEL_AUTOMATIC, &viewModel, &playerModel ) )
+		return DefaultDeploy( viewModel, playerModel, MP5_DEPLOY, "mp5" );
 	return DefaultDeploy( "models/v_9mmAR.mdl", "models/p_9mmAR.mdl", MP5_DEPLOY, "mp5" );
 }
 

@@ -60,6 +60,8 @@ void CGlock::Precache( void )
 	PRECACHE_MODEL( "models/v_9mmhandgun.mdl" );
 	PRECACHE_MODEL( "models/w_9mmhandgun.mdl" );
 	PRECACHE_MODEL( "models/p_9mmhandgun.mdl" );
+	PRECACHE_MODEL( "models/v_colt.mdl" ); PRECACHE_MODEL( "models/p_colt.mdl" );
+	PRECACHE_MODEL( "models/v_luger.mdl" ); PRECACHE_MODEL( "models/p_luger.mdl" );
 
 	m_iShell = PRECACHE_MODEL( "models/shell.mdl" );// brass shell
 
@@ -110,6 +112,9 @@ int CGlock::AddToPlayer( CBasePlayer *pPlayer )
 
 BOOL CGlock::Deploy()
 {
+	const char *viewModel, *playerModel;
+	if( Dod_GameIsActive() && Dod_GetWeaponModels( m_pPlayer->entindex(), DOD_MODEL_PISTOL, &viewModel, &playerModel ) )
+		return DefaultDeploy( viewModel, playerModel, GLOCK_DRAW, "onehanded" );
 	// pev->body = 1;
 	return DefaultDeploy( "models/v_9mmhandgun.mdl", "models/p_9mmhandgun.mdl", GLOCK_DRAW, "onehanded", /*UseDecrement() ? 1 : 0*/ 0 );
 }

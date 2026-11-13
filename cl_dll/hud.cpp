@@ -163,6 +163,38 @@ static void GC_HudListResetPool( void )
 	memset( s_gcHudListUsed, 0, sizeof( s_gcHudListUsed ));
 	memset( s_gcHudListPool, 0, sizeof( s_gcHudListPool ));
 }
+
+/* The low-memory HUD deliberately avoids constructing the full VGUI and
+ * sprite HUD trees. Multiplayer still sends these messages after signon.
+ * Keep the network state that other client code consumes and acknowledge the
+ * presentation-only messages rather than leaving the client with unbound
+ * user-message IDs. */
+static int GC_MsgFunc_ScoreInfo( const char *pszName, int iSize, void *pbuf )
+{
+	short client, frags, deaths, playerclass, teamnumber;
+
+	BEGIN_READ( pbuf, iSize );
+	client = READ_BYTE();
+	frags = READ_SHORT();
+	deaths = READ_SHORT();
+	playerclass = READ_SHORT();
+	teamnumber = READ_SHORT();
+	if( client > 0 && client <= MAX_PLAYERS )
+	{
+		g_PlayerExtraInfo[client].frags = frags;
+		g_PlayerExtraInfo[client].deaths = deaths;
+		g_PlayerExtraInfo[client].playerclass = playerclass;
+		g_PlayerExtraInfo[client].teamnumber = teamnumber;
+	}
+	return 1;
+}
+
+static int GC_MsgFunc_Presentation( const char *pszName, int iSize, void *pbuf )
+{
+	/* Text, server-name, death, and pickup notices require the omitted
+	 * sprite/VGUI HUD. Accept their payloads so a lean peer stays in sync. */
+	return 1;
+}
 #endif
 
 //DECLARE_MESSAGE( m_Logo, Logo )
@@ -283,6 +315,8 @@ int __MsgFunc_Detpack( const char *pszName, int iSize, void *pbuf )
 	return 0;
 }
 
+int __MsgFunc_ShowMenu( const char *pszName, int iSize, void *pbuf );
+
 int __MsgFunc_VGUIMenu( const char *pszName, int iSize, void *pbuf )
 {
 #if USE_VGUI
@@ -400,6 +434,8 @@ void CHud::Init( void )
 		 * dereferences without allocating sprite or HUD-element lists. */
 		HOOK_MESSAGE( ResetHUD );
 		HOOK_MESSAGE( InitHUD );
+		HOOK_MESSAGE( GameMode );
+		HOOK_MESSAGE( ShowMenu );
 		HOOK_MESSAGE( SetFOV );
 		HOOK_MESSAGE( Geiger );
 		HOOK_MESSAGE( Flashlight );
@@ -414,6 +450,12 @@ void CHud::Init( void )
 		HOOK_MESSAGE( AmmoX );
 		HOOK_MESSAGE( StatusText );
 		HOOK_MESSAGE( StatusValue );
+		gEngfuncs.pfnHookUserMsg( "ScoreInfo", GC_MsgFunc_ScoreInfo );
+		gEngfuncs.pfnHookUserMsg( "TextMsg", GC_MsgFunc_Presentation );
+		gEngfuncs.pfnHookUserMsg( "ServerName", GC_MsgFunc_Presentation );
+		gEngfuncs.pfnHookUserMsg( "DeathMsg", GC_MsgFunc_Presentation );
+		gEngfuncs.pfnHookUserMsg( "WeapPickup", GC_MsgFunc_Presentation );
+		gEngfuncs.pfnHookUserMsg( "AmmoPickup", GC_MsgFunc_Presentation );
 		m_iLogo = 0;
 		/* G280: avoid CVAR_CREATE alloc after StatusValue — was tipping MEM1
 		 * (Unloading world before "minimal ready"). Reuse existing cvars. */

@@ -22,6 +22,7 @@
 #include "nodes.h"
 #include "player.h"
 #include "gamerules.h"
+#include "dod_game.h"
 
 enum rpg_e
 {
@@ -377,6 +378,8 @@ void CRpg::Precache( void )
 	PRECACHE_MODEL( "models/w_rpg.mdl" );
 	PRECACHE_MODEL( "models/v_rpg.mdl" );
 	PRECACHE_MODEL( "models/p_rpg.mdl" );
+	PRECACHE_MODEL( "models/v_bazooka.mdl" ); PRECACHE_MODEL( "models/p_bazooka.mdl" );
+	PRECACHE_MODEL( "models/v_panzerschreck.mdl" ); PRECACHE_MODEL( "models/p_pschreck.mdl" );
 
 	PRECACHE_SOUND( "items/9mmclip1.wav" );
 
@@ -420,6 +423,9 @@ int CRpg::AddToPlayer( CBasePlayer *pPlayer )
 
 BOOL CRpg::Deploy()
 {
+	const char *viewModel, *playerModel;
+	if( Dod_GameIsActive() && Dod_GetWeaponModels( m_pPlayer->entindex(), DOD_MODEL_ROCKET, &viewModel, &playerModel ) )
+		return DefaultDeploy( viewModel, playerModel, m_iClip ? RPG_DRAW1 : RPG_DRAW_UL, "rpg" );
 	if( m_iClip == 0 )
 	{
 		return DefaultDeploy( "models/v_rpg.mdl", "models/p_rpg.mdl", RPG_DRAW_UL, "rpg" );

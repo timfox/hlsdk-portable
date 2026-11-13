@@ -107,6 +107,8 @@ set (SVDLL_SOURCES
 	mortar.cpp
 	mp5.cpp
 	multiplay_gamerules.cpp
+	dod_game.c
+	dod_runtime.cpp
 	nihilanth.cpp
 	nodes.cpp
 	observer.cpp

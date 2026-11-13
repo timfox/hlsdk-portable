@@ -23,6 +23,7 @@
 #include	"weapons.h"
 #include	"gamerules.h"
 #include	"teamplay_gamerules.h"
+#include	"dod_runtime.h"
 #include	"skill.h"
 #include	"game.h"
 
@@ -334,6 +335,12 @@ CGameRules *InstallGameRules( void )
 {
 	SERVER_COMMAND( "exec game.cfg\n" );
 	SERVER_EXECUTE();
+	char gamefolder[256] = "";
+	g_engfuncs.pfnGetGameDir( gamefolder );
+	char *gameleaf = strrchr( gamefolder, '/' );
+	if( !gameleaf ) gameleaf = strrchr( gamefolder, '\\' );
+	if( gameleaf ) ++gameleaf;
+	else gameleaf = gamefolder;
 
 	if( !gpGlobals->deathmatch )
 	{
@@ -347,6 +354,8 @@ CGameRules *InstallGameRules( void )
 		{
 			// teamplay
 			g_teamplay = 1;
+			if( !stricmp( gameleaf, "dod" ) )
+				return new CHalfLifeDoD;
 			return new CHalfLifeTeamplay;
 		}
 		if( sv_busters.value > 0 )

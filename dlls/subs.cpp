@@ -68,6 +68,104 @@ LINK_ENTITY_TO_CLASS( info_player_deathmatch, CBaseDMStart )
 LINK_ENTITY_TO_CLASS( info_player_start, CPointEntity )
 LINK_ENTITY_TO_CLASS( info_landmark, CPointEntity )
 
+/* Day of Defeat map entities (dod-gc): Steam DoD assets + HL1SDK DM runtime.
+ * Spawn points alias DM starts so peers can enter the world; objective /
+ * helper ents are inert point stubs until src/dod_game gamerules land. */
+LINK_ENTITY_TO_CLASS( info_player_allies, CBaseDMStart )
+LINK_ENTITY_TO_CLASS( info_player_axis, CBaseDMStart )
+LINK_ENTITY_TO_CLASS( info_player_observer, CPointEntity )
+LINK_ENTITY_TO_CLASS( info_doddetect, CPointEntity )
+LINK_ENTITY_TO_CLASS( dod_control_point_master, CPointEntity )
+LINK_ENTITY_TO_CLASS( dod_score_ent, CPointEntity )
+LINK_ENTITY_TO_CLASS( dod_trigger_sandbag, CPointEntity )
+LINK_ENTITY_TO_CLASS( env_state, CPointEntity )
+
+/* CapFaces tip-safe DoD map props: SET_MODEL when tip allows, else inert
+ * point (still occupies an edict so densify/draw can promote later). Spawning
+ * every env_model with full MDL mid-load blacked caen; unique-model cap. */
+class CEnvModel : public CPointEntity
+{
+public:
+	void Spawn( void );
+	void Precache( void );
+};
+
+#if defined(__GAMECUBE__)
+/* Unique MDL paths already PRECACHE'd this map (satchel×11 shares one slot). */
+static char g_gc_env_model_paths[8][64];
+static int g_gc_env_model_unique;
+
+static int GC_EnvModelPathKnown( const char *path )
+{
+	int i;
+
+	for( i = 0; i < g_gc_env_model_unique; i++ )
+	{
+		if( !strcmp( g_gc_env_model_paths[i], path ) )
+			return 1;
+	}
+	return 0;
+}
+
+static void GC_EnvModelRemember( const char *path )
+{
+	if( g_gc_env_model_unique >= (int)( sizeof( g_gc_env_model_paths ) / sizeof( g_gc_env_model_paths[0] ) ) )
+		return;
+	strncpy( g_gc_env_model_paths[g_gc_env_model_unique], path,
+		sizeof( g_gc_env_model_paths[0] ) - 1 );
+	g_gc_env_model_paths[g_gc_env_model_unique][sizeof( g_gc_env_model_paths[0] ) - 1] = 0;
+	g_gc_env_model_unique++;
+}
+#endif
+
+void CEnvModel::Precache( void )
+{
+	if( !FStringNull( pev->model ) )
+		PRECACHE_MODEL( (char *)STRING( pev->model ) );
+}
+
+void CEnvModel::Spawn( void )
+{
+	CPointEntity::Spawn();
+	pev->movetype = MOVETYPE_NONE;
+	pev->solid = SOLID_NOT;
+	pev->takedamage = DAMAGE_NO;
+
+	if( FStringNull( pev->model ) )
+		return;
+
+#if defined(__GAMECUBE__)
+	{
+		const char *path = STRING( pev->model );
+		const int known = GC_EnvModelPathKnown( path );
+
+		/* Tip: densify needs free MEM1; lean mapmodels still cost studio BSS
+		 * (~4–40 KiB each). Allow ≤6 unique paths; duplicates of a loaded
+		 * path still SET_MODEL (cheap modelindex reuse). */
+		if( !known && g_gc_env_model_unique >= 6 )
+		{
+			ALERT( at_console, "*GameCube: CapFaces env_model defer %s unique-cap\n",
+				path );
+			return;
+		}
+		Precache();
+		SET_MODEL( ENT( pev ), path );
+		if( !known )
+		{
+			GC_EnvModelRemember( path );
+			ALERT( at_console, "*GameCube: CapFaces env_model unique #%d %s\n",
+				g_gc_env_model_unique, path );
+		}
+	}
+#else
+	Precache();
+	SET_MODEL( ENT( pev ), STRING( pev->model ) );
+#endif
+}
+
+LINK_ENTITY_TO_CLASS( env_model, CEnvModel )
+LINK_ENTITY_TO_CLASS( dod_object, CEnvModel )
+
 void CBaseDMStart::KeyValue( KeyValueData *pkvd )
 {
 	if( FStrEq( pkvd->szKeyName, "master" ) )

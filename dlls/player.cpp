@@ -2514,7 +2514,12 @@ void CBasePlayer::UpdatePlayerSound( void )
 
 	if( !pSound )
 	{
-		ALERT( at_console, "Client lost reserved sound!\n" );
+		static int gc_lost_sound_logs;
+		if( gc_lost_sound_logs < 2 )
+		{
+			ALERT( at_console, "Client lost reserved sound!\n" );
+			gc_lost_sound_logs++;
+		}
 		return;
 	}
 
@@ -2739,10 +2744,19 @@ pt_end:
 		if( m_rgpPlayerItems[i] )
 		{
 			CBasePlayerItem *pPlayerItem = m_rgpPlayerItems[i];
+			int gc_weapon_hops = 0;
 
 			while( pPlayerItem )
 			{
 				CBasePlayerWeapon *gun;
+
+				/* Cap Cycles: broken m_pNext after land hung Host_Frame
+				 * (ava-hl1move-6: silence after "Client lost reserved sound"). */
+				if( ++gc_weapon_hops > 64 )
+				{
+					ALERT( at_console, "PlayerPostThink: weapon chain truncated slot=%d\n", i );
+					break;
+				}
 
 				gun = (CBasePlayerWeapon *)pPlayerItem->GetWeaponPtr();
 

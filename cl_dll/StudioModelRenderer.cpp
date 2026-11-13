@@ -1164,7 +1164,11 @@ int CStudioModelRenderer::StudioDrawModel( int flags )
 		{
 			cl_entity_t *ent = gEngfuncs.GetEntityByIndex( m_pCurrentEntity->index );
 
-			memcpy( ent->attachment, m_pCurrentEntity->attachment, sizeof(vec3_t) * 4 );
+			/* Lean EmitBrush uses server edict indices; gcmap bootstrap
+			 * maxEntities=2 → GetEntityByIndex NULL → memcpy DAR≈0x620
+			 * drawing nihilanth under -gcfullphysics (client StudioDrawModel). */
+			if( ent )
+				memcpy( ent->attachment, m_pCurrentEntity->attachment, sizeof(vec3_t) * 4 );
 		}
 	}
 
@@ -1455,7 +1459,11 @@ int CStudioModelRenderer::StudioDrawPlayer( int flags, entity_state_t *pplayer )
 		{
 			cl_entity_t *ent = gEngfuncs.GetEntityByIndex( m_pCurrentEntity->index );
 
-			memcpy( ent->attachment, m_pCurrentEntity->attachment, sizeof(vec3_t) * 4 );
+			/* Lean EmitBrush uses server edict indices; gcmap bootstrap
+			 * maxEntities=2 → GetEntityByIndex NULL → memcpy DAR≈0x620
+			 * drawing nihilanth under -gcfullphysics (client StudioDrawModel). */
+			if( ent )
+				memcpy( ent->attachment, m_pCurrentEntity->attachment, sizeof(vec3_t) * 4 );
 		}
 	}
 

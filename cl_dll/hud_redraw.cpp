@@ -211,6 +211,19 @@ int CHud::Redraw( float flTime, int intermission )
 		{
 			int sheet_w, sheet_h;
 
+			/* CapFaces Flipper HUD can redraw long after VidInit; refresh
+			 * m_scrinfo so ScreenWidth/Height are not still 0 (suit/crosshair
+			 * were laid out at x=-60 / 0,0 — probe hud18). */
+			m_scrinfo.iSize = sizeof( m_scrinfo );
+			GetScreenInfo( &m_scrinfo );
+			if( m_scrinfo.iWidth <= 0 )
+				m_scrinfo.iWidth = 640;
+			if( m_scrinfo.iHeight <= 0 )
+				m_scrinfo.iHeight = 480;
+			if( m_iGcLeanHudLog == 0 )
+				gEngfuncs.Con_Printf( "Xash3D GameCube: lean HUD scrInfo %dx%d\n",
+					m_scrinfo.iWidth, m_scrinfo.iHeight );
+
 			/* Load number sheet first — same size as crosshairs; avoid last-slot OOM. */
 			if( !s_gcLeanHud2 )
 				s_gcLeanHud2 = SPR_Load( "sprites/gc_320hud2.spr" );
@@ -348,6 +361,9 @@ int CHud::Redraw( float flTime, int intermission )
 						"Xash3D GameCube: G185 lean crosshair cell=%dx%d (was %dx%d)\n",
 						cell, cell, sheet_w, sheet_h );
 			}
+			/* Draw DoD ShowMenu UI without allocating the regular HUD list. */
+			if( m_Menu.m_fMenuDisplayed )
+				m_Menu.Draw( flTime );
 			/* Once-flag lives on CHud — file/function statics re-spam on GC. */
 			if( m_iGcLeanHudLog == 0 )
 			{

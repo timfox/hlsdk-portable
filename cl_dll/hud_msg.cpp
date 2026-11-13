@@ -44,6 +44,10 @@ int CHud::MsgFunc_ResetHUD( const char *pszName, int iSize, void *pbuf )
 			pList->p->Reset();
 		pList = pList->pNext;
 	}
+	/* GameCube lean HUD skips AddHudElem for memory headroom, but still accepts
+	 * DoD class menus. Reset that state directly so a stale menu cannot survive
+	 * a map change or respawn. */
+	m_Menu.InitHUDData();
 
 	// reset sensitivity
 	m_flMouseSensitivity = 0;

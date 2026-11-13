@@ -1746,6 +1746,13 @@ int PM_CheckStuck( void )
 
 	static float rgStuckCheckTime[MAX_CLIENTS][2]; // Last time we did a full
 
+#if defined(__GAMECUBE__) || defined(XASH_GAMECUBE)
+	/* World clipnodes are remapped after CapFaces bake; TestPlayerPosition /
+	 * RecursiveHullCheck DSI (solo listen Dolphin 20261107-122241). Skip
+	 * unstick nudges — server/client still categorise position elsewhere. */
+	return 0;
+#endif
+
 	// If position is okay, exit
 	hitent = pmove->PM_TestPlayerPosition( pmove->origin, &traceresult );
 	if( hitent == -1 )

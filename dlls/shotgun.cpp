@@ -21,6 +21,7 @@
 #include "nodes.h"
 #include "player.h"
 #include "gamerules.h"
+#include "dod_game.h"
 
 // special deathmatch shotgun spreads
 #define VECTOR_CONE_DM_SHOTGUN	Vector( 0.08716, 0.04362, 0.00 )// 10 degrees by 5 degrees
@@ -58,6 +59,8 @@ void CShotgun::Precache( void )
 	PRECACHE_MODEL( "models/v_shotgun.mdl" );
 	PRECACHE_MODEL( "models/w_shotgun.mdl" );
 	PRECACHE_MODEL( "models/p_shotgun.mdl" );
+	PRECACHE_MODEL( "models/v_bren.mdl" ); PRECACHE_MODEL( "models/p_bren.mdl" );
+	PRECACHE_MODEL( "models/v_mp44.mdl" ); PRECACHE_MODEL( "models/p_stg44.mdl" );
 
 	m_iShell = PRECACHE_MODEL( "models/shotgunshell.mdl" );// shotgun shell
 
@@ -110,6 +113,9 @@ int CShotgun::GetItemInfo( ItemInfo *p )
 
 BOOL CShotgun::Deploy()
 {
+	const char *viewModel, *playerModel;
+	if( Dod_GameIsActive() && Dod_GetWeaponModels( m_pPlayer->entindex(), DOD_MODEL_SUPPORT, &viewModel, &playerModel ) )
+		return DefaultDeploy( viewModel, playerModel, SHOTGUN_DRAW, "shotgun" );
 	return DefaultDeploy( "models/v_shotgun.mdl", "models/p_shotgun.mdl", SHOTGUN_DRAW, "shotgun" );
 }
 
