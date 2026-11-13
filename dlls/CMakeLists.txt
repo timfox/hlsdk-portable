@@ -108,6 +108,11 @@ set (SVDLL_SOURCES
 	mp5.cpp
 	multiplay_gamerules.cpp
 	dod_game.c
+	dod_weapons.c
+	dod_runtime.cpp
+	dod_grenade.cpp
+	dod_weapon.cpp
+	dod_game.c
 	dod_runtime.cpp
 	nihilanth.cpp
 	nodes.cpp

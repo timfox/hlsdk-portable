@@ -18,6 +18,7 @@
 #include "cbase.h"
 #include "monsters.h"
 #include "weapons.h"
+#include "dod_game.h"
 #include "nodes.h"
 #include "player.h"
 

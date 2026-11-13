@@ -20,6 +20,8 @@
 #include "weapons.h"
 #include "nodes.h"
 #include "player.h"
+#include "dod_game.h"
+#include "dod_grenade.h"
 
 #define	HANDGRENADE_PRIMARY_VOLUME		450
 
@@ -61,6 +63,7 @@ void CHandGrenade::Precache( void )
 	PRECACHE_MODEL( "models/w_grenade.mdl" );
 	PRECACHE_MODEL( "models/v_grenade.mdl" );
 	PRECACHE_MODEL( "models/p_grenade.mdl" );
+	DodGrenade_Precache();
 }
 
 int CHandGrenade::GetItemInfo( ItemInfo *p )
@@ -88,6 +91,11 @@ int CHandGrenade::GetItemInfo( ItemInfo *p )
 BOOL CHandGrenade::Deploy()
 {
 	m_flReleaseThrow = -1;
+	{
+		const char *viewModel, *playerModel;
+		if( Dod_GameIsActive() && Dod_GetWeaponModels( m_pPlayer->entindex(), DOD_MODEL_GRENADE, &viewModel, &playerModel ) )
+			return DefaultDeploy( viewModel, playerModel, HANDGRENADE_DRAW, "crowbar" );
+	}
 	return DefaultDeploy( "models/v_grenade.mdl", "models/p_grenade.mdl", HANDGRENADE_DRAW, "crowbar" );
 }
 
@@ -123,12 +131,14 @@ void CHandGrenade::Holster( int skiplocal /* = 0 */ )
 
 void CHandGrenade::PrimaryAttack()
 {
-	if( !m_flStartThrow && m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] > 0 )
+	if( !m_flStartThrow && m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] > 0 && DodGrenade_CanPrime() )
 	{
 		m_flStartThrow = gpGlobals->time;
 		m_flReleaseThrow = 0.0f;
 
 		SendWeaponAnim( HANDGRENADE_PINPULL );
+		if( Dod_GameIsActive() )
+			EMIT_SOUND( ENT( m_pPlayer->pev ), CHAN_WEAPON, "weapons/grenpinpull.wav", 1.0f, ATTN_NORM );
 		m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 0.5f;
 	}
 }
@@ -165,7 +175,9 @@ void CHandGrenade::WeaponIdle( void )
 		if( time < 0.0f )
 			time = 0.0f;
 
-		CGrenade::ShootTimed( m_pPlayer->pev, vecSrc, vecThrow, time );
+		/* DoD: team model, 5s fuse that cooking shortens, capped live count. */
+		if( !DodGrenade_Throw( m_pPlayer, gpGlobals->time - m_flStartThrow ) )
+			CGrenade::ShootTimed( m_pPlayer->pev, vecSrc, vecThrow, time );
 
 		if( flVel < 500.0f )
 		{

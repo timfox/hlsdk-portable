@@ -27,6 +27,7 @@
 #include "soundent.h"
 #include "decals.h"
 #include "game.h"
+#include "dod_grenade.h"
 
 //===================grenade
 
@@ -50,6 +51,8 @@ void CGrenade::Explode( Vector vecSrc, Vector vecAim )
 // UNDONE: temporary scorching for PreAlpha - find a less sleazy permenant solution.
 void CGrenade::Explode( TraceResult *pTrace, int bitsDamageType )
 {
+	if( DodGrenade_Explode( this, pTrace, bitsDamageType ) )
+		return;
 	// float flRndSound;// sound randomizer
 
 	pev->model = iStringNull;//invisible

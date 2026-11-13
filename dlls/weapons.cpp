@@ -30,6 +30,7 @@
 #include "soundent.h"
 #include "decals.h"
 #include "gamerules.h"
+#include "dod_weapon.h"
 
 extern CGraph WorldGraph;
 extern int gEvilImpulse101;
@@ -377,6 +378,8 @@ void W_Precache( void )
 #endif
 	// hand grenade
 	UTIL_PrecacheOtherWeapon("weapon_handgrenade");
+	/* DoD guns: ItemInfo and ammo only; models load when granted. */
+	DodWeapons_PrecacheAll();
 #if !OEM_BUILD && !HLDEMO_BUILD
 	// squeak grenade
 	UTIL_PrecacheOtherWeapon( "weapon_snark" );
