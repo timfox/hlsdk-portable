@@ -106,6 +106,7 @@ static HSPRITE s_gcLeanPain = 0;
 static HSPRITE s_gcLeanTrain = 0;
 static HSPRITE s_gcLeanCross = 0;
 static HSPRITE s_gcLeanHud2 = 0;
+static int s_gcFullVidInitTried = 0;
 
 /* 320hud2 digit/cross rects from valve/sprites/hud.txt (320 block). */
 static void GC_LeanDrawHudDigit( HSPRITE sheet, int digit, int x, int y, int r, int g, int b )
@@ -385,6 +386,23 @@ int CHud::Redraw( float flTime, int intermission )
 				}
 			}
 			return 1;
+		}
+
+		/* Full tier: the GC engine loads client progs after SCR_Init, so
+		 * HUD_VidInit may never have run and hud.txt rects are still NULL
+		 * (first CHudAmmo::Draw read m_rgrcRects[number_0] at address 0).
+		 * Run the stock VidInit once here, the way SCR_VidInit would. */
+		if( !m_rgrcRects )
+		{
+			if( !s_gcFullVidInitTried )
+			{
+				s_gcFullVidInitTried = 1;
+				gEngfuncs.Con_Printf( "Xash3D GameCube: full HUD late VidInit\n" );
+				VidInit();
+				gEngfuncs.Con_Printf( "Xash3D GameCube: full HUD late VidInit done sprites=%d\n", m_iSpriteCount );
+			}
+			if( !m_rgrcRects )
+				return 1;
 		}
 	}
 #endif
