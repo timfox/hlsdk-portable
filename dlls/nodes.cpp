@@ -2618,6 +2618,13 @@ int CGraph::FLoadGraph( const char *szMapName )
 ShortFile:
 NoMemory:
 	FREE_FILE( aMemFile );
+	// The header memcpy above loaded m_fGraphPresent/m_fGraphPointersSet as
+	// they were saved (TRUE). A short file or a failed calloc must not leave
+	// the graph marked present with NULL node/sort arrays: FindNearestNode
+	// would walk m_di (DSI at c1a1b when 57 nodes could not be allocated).
+	// InitGraph frees whatever was allocated and clears the flags, so callers
+	// see "no graph" exactly as when the .nod is missing.
+	InitGraph();
 	return FALSE;
 }
 
