@@ -18,6 +18,9 @@
 
 #include <cmath>
 #include "hud.h"
+#ifdef __GAMECUBE__
+int GC_HudQuality( void );
+#endif
 #include "cl_util.h"
 #include <stdlib.h>
 
@@ -32,9 +35,8 @@ int CHud::UpdateClientData( client_data_t *cdata, float time )
 {
 #ifdef __GAMECUBE__
 	{
-		cvar_t *quality = gEngfuncs.pfnGetCvarPointer( "gc_quality" );
 		cvar_t *probe_skip = gEngfuncs.pfnGetCvarPointer( "gc_hud_probe_skip" );
-		const int q = quality ? (int)quality->value : 1;
+		const int q = GC_HudQuality();
 		const int skip = probe_skip ? (int)probe_skip->value : 0;
 
 		/* Lean low-memory HUD uses direct sprite draws from Redraw().

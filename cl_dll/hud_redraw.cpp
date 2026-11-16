@@ -18,6 +18,9 @@
 #include <cmath>
 
 #include "hud.h"
+#ifdef __GAMECUBE__
+int GC_HudQuality( void );
+#endif
 #include "cl_util.h"
 //#include "triangleapi.h"
 
@@ -204,8 +207,7 @@ int CHud::Redraw( float flTime, int intermission )
 	 * would chase null m_rghSprites / DVD stubs and stall Host_Frame. Draw one
 	 * direct-load 320 sheet as New Game HUD proof instead. */
 	{
-		cvar_t *quality = gEngfuncs.pfnGetCvarPointer( "gc_quality" );
-		const int q = quality ? (int)quality->value : 1;
+		const int q = GC_HudQuality();
 
 		if( q <= 0 )
 		{

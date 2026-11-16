@@ -122,9 +122,13 @@ cvar_t *cl_viewbob = NULL;
 void ShutdownInput( void );
 
 #ifdef __GAMECUBE__
-static int GC_HudQuality( void )
+/* The HUD tier follows gc_hud when the engine registers it, so the world
+ * renderer forcing gc_quality 0 for memory no longer drops the whole HUD to
+ * the lean proof sprites. Without gc_hud (older engines), gc_quality decides. */
+int GC_HudQuality( void )
 {
-	cvar_t *quality = gEngfuncs.pfnGetCvarPointer( "gc_quality" );
+	cvar_t *hud = gEngfuncs.pfnGetCvarPointer( "gc_hud" );
+	cvar_t *quality = hud ? hud : gEngfuncs.pfnGetCvarPointer( "gc_quality" );
 	int value = quality ? quality->value : 1;
 
 	if( value < 0 )
