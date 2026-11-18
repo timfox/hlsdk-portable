@@ -302,7 +302,7 @@ void CLCSeagull::GullThink( void )
 #define LC_MAX_LINKS	1024
 #define LC_MAX_ROUTE	64
 
-enum { LCE_SPEAK, LCE_LOOKAT, LCE_FACE, LCE_MOVETO, LCE_GESTURE };
+enum { LCE_SPEAK, LCE_LOOKAT, LCE_FACE, LCE_MOVETO, LCE_GESTURE, LCE_FLEX };
 
 typedef struct
 {
@@ -399,6 +399,8 @@ static lc_scene_t *LC_LoadScene( const char *file )
 			ev->type = LCE_FACE;
 		else if( !strcmp( kind, "moveto" ) && sscanf( line, "%*s %f %f %63s %f", &t0, &t1, arg, &a ) >= 3 )
 			ev->type = LCE_MOVETO;
+		else if( !strcmp( kind, "flex" ) && sscanf( line, "%*s %f %f %63s", &t0, &t1, arg ) >= 3 )
+			ev->type = LCE_FLEX; // the scene's facial track (brows, eyelids): a baked file
 		else if( !strcmp( kind, "gesture" ))
 		{
 			float tg[8];
@@ -418,7 +420,7 @@ static lc_scene_t *LC_LoadScene( const char *file )
 		ev->t1 = t1;
 		ev->a = a;
 		ev->b = b;
-		ev->arg = ( ev->type == LCE_SPEAK || ev->type == LCE_GESTURE ) ? STRING( ALLOC_STRING( arg )) : "";
+		ev->arg = ( ev->type == LCE_SPEAK || ev->type == LCE_GESTURE || ev->type == LCE_FLEX ) ? STRING( ALLOC_STRING( arg )) : "";
 		sc->n++;
 		if( ev->type == LCE_SPEAK )
 			PRECACHE_SOUND( (char *)ev->arg );
@@ -763,6 +765,7 @@ Vector CLCFisherman::PlayerPos( void )
 
 #if XASH_GAMECUBE
 extern "C" void GC_ActorPose( int ent, const char *name, float cycle ) __attribute__(( weak ));
+extern "C" void GC_ActorFace( int ent, const char *track, float start, float end ) __attribute__(( weak ));
 #endif
 
 #if XASH_GAMECUBE
@@ -960,6 +963,12 @@ void CLCFisherman::RunScene( float interval )
 		case LCE_GESTURE:
 			if( !ev->started )
 				PlayGesture( ev, m_flSceneStart );
+			break;
+		case LCE_FLEX:
+#if XASH_GAMECUBE
+			if( !ev->started && GC_ActorFace )
+				GC_ActorFace( ENTINDEX( edict()), ev->arg, m_flSceneStart + ev->t0, m_flSceneStart + ev->t1 );
+#endif
 			break;
 		case LCE_MOVETO:
 			// walks on past the event's end until he gets there
