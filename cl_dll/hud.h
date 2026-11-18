@@ -138,7 +138,6 @@ public:
 	void _cdecl UserCmd_NextWeapon( void );
 	void _cdecl UserCmd_PrevWeapon( void );
 	/* GameCube lean HUD: clip count, or -1 if melee / no weapon. */
-	int GetLeanClip( void ) const { return m_pWeapon ? m_pWeapon->iClip : -1; }
 
 private:
 	float m_fFade;
@@ -545,7 +544,6 @@ private:
 	HUDLIST						*m_pHudList;
 	HSPRITE						m_hsprLogo;
 	int							m_iLogo;
-	int							m_iGcLeanHudLog; /* GameCube quality-0 HUD once-flag */
 	client_sprite_t				*m_pSpriteList;
 	int							m_iSpriteCount;
 	int							m_iSpriteCountAllRes;

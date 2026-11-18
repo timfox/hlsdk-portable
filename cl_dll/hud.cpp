@@ -99,21 +99,6 @@ float g_hud_text_color[3];
 
 extern client_sprite_t *GetSpriteList( client_sprite_t *pList, const char *psz, int iRes, int iCount );
 
-#ifdef __GAMECUBE__
-int __MsgFunc_Geiger( const char *, int, void * );
-int __MsgFunc_Flashlight( const char *, int, void * );
-int __MsgFunc_FlashBat( const char *, int, void * );
-int __MsgFunc_Health( const char *, int, void * );
-int __MsgFunc_Damage( const char *, int, void * );
-int __MsgFunc_Battery( const char *, int, void * );
-int __MsgFunc_Train( const char *, int, void * );
-int __MsgFunc_CurWeapon( const char *, int, void * );
-int __MsgFunc_WeaponList( const char *, int, void * );
-int __MsgFunc_HideWeapon( const char *, int, void * );
-int __MsgFunc_AmmoX( const char *, int, void * );
-int __MsgFunc_StatusText( const char *, int, void * );
-int __MsgFunc_StatusValue( const char *, int, void * );
-#endif
 
 extern cvar_t *sensitivity;
 cvar_t *cl_lw = NULL;
@@ -122,19 +107,6 @@ cvar_t *cl_viewbob = NULL;
 void ShutdownInput( void );
 
 #ifdef __GAMECUBE__
-static int GC_HudQuality( void )
-{
-	cvar_t *quality = gEngfuncs.pfnGetCvarPointer( "gc_quality" );
-	int value = quality ? quality->value : 1;
-
-	if( value < 0 )
-		value = 0;
-	if( value > 1 )
-		value = 1;
-
-	return value;
-}
-
 /* G336: avoid libc malloc during HUD_Init — can stall after StatusIcon on
  * denser AM cold New Game (probe 20260810-035405). */
 #define GC_HUDLIST_POOL 32
@@ -389,47 +361,6 @@ int __MsgFunc_AllowSpec( const char *pszName, int iSize, void *pbuf )
 // This is called every time the DLL is loaded
 void CHud::Init( void )
 {
-#ifdef __GAMECUBE__
-	// Check for emergency -nohud mode or low visual quality
-	const int quality = GC_HudQuality();
-	gEngfuncs.Con_Printf( "Xash3D GameCube: CHud::Init begin quality=%d\n", quality );
-	if( quality == 0 )
-	{
-		/* UpdateClientData still runs the original HUD Think path at quality 0.
-		 * Register original message wrappers and initialize every value it
-		 * dereferences without allocating sprite or HUD-element lists. */
-		HOOK_MESSAGE( ResetHUD );
-		HOOK_MESSAGE( InitHUD );
-		HOOK_MESSAGE( SetFOV );
-		HOOK_MESSAGE( Geiger );
-		HOOK_MESSAGE( Flashlight );
-		HOOK_MESSAGE( FlashBat );
-		HOOK_MESSAGE( Health );
-		HOOK_MESSAGE( Damage );
-		HOOK_MESSAGE( Battery );
-		HOOK_MESSAGE( Train );
-		HOOK_MESSAGE( CurWeapon );
-		HOOK_MESSAGE( WeaponList );
-		HOOK_MESSAGE( HideWeapon );
-		HOOK_MESSAGE( AmmoX );
-		HOOK_MESSAGE( StatusText );
-		HOOK_MESSAGE( StatusValue );
-		m_iLogo = 0;
-		/* G280: avoid CVAR_CREATE alloc after StatusValue — was tipping MEM1
-		 * (Unloading world before "minimal ready"). Reuse existing cvars. */
-		gEngfuncs.Con_Printf( "Xash3D GameCube: CHud::Init lean cvars\n" );
-		default_fov = gEngfuncs.pfnGetCvarPointer( "default_fov" );
-		m_iFOV = default_fov ? (int)default_fov->value : 90;
-		m_flMouseSensitivity = 0;
-		m_iKeyBits = 0;
-		m_iWeaponBits = 0;
-		m_iGcLeanHudLog = 0;
-		m_flTime = 1.0;
-		gEngfuncs.Con_Printf( "Xash3D GameCube: CHud::Init minimal ready\n" );
-		return;
-	}
-#endif
-
 	HOOK_MESSAGE( Logo );
 	HOOK_MESSAGE( ResetHUD );
 	HOOK_MESSAGE( GameMode );
@@ -593,15 +524,6 @@ void CHud::Init( void )
 	m_AmmoSecondary.Init();
 	m_TextMessage.Init();
 	m_StatusIcons.Init();
-#ifdef __GAMECUBE__
-	gEngfuncs.Con_Printf( "Xash3D GameCube: CHud::Init StatusIcons ready\n" );
-	/* G336: denser AM ISOs can stall in MOTD/Scoreboard/Menu AddHudElem
-	 * (libc malloc) or richpresence ClientCmd after StatusIcon
-	 * (probe 20260810-035405). Combat HUD hooks are already registered. */
-	MsgFunc_ResetHUD( 0, 0, NULL );
-	gEngfuncs.Con_Printf( "Xash3D GameCube: CHud::Init hud ready (G336 lean tail)\n" );
-	return;
-#else
 #if USE_VGUI
 	GetClientVoiceMgr()->Init(&g_VoiceStatusHelper, (vgui::Panel**)&gViewPort);
 #endif
@@ -616,6 +538,10 @@ void CHud::Init( void )
 	m_Menu.Init();
 
 	MsgFunc_ResetHUD( 0, 0, NULL );
+#ifdef __GAMECUBE__
+	/* No Steam rich presence on GameCube; retail HL1 has none either. */
+	gEngfuncs.Con_Printf( "Xash3D GameCube: CHud::Init hud ready\n" );
+#else
 	ClientCmd( "richpresence_gamemode\n" );
 	ClientCmd( "richpresence_update\n" );
 #endif
@@ -665,17 +591,6 @@ int CHud::GetSpriteIndex( const char *SpriteName )
 
 void CHud::VidInit( void )
 {
-#ifdef __GAMECUBE__
-	if( GC_HudQuality() == 0 )
-	{
-		m_scrinfo.iSize = sizeof(m_scrinfo);
-		GetScreenInfo( &m_scrinfo );
-		/* Lean New Game / low-mem: keep 320 sheet names without loading hud.txt. */
-		m_iRes = 320;
-		m_iMaxRes = 320;
-		return;
-	}
-#endif
 
 	int j;
 	m_scrinfo.iSize = sizeof(m_scrinfo);
@@ -705,11 +620,6 @@ void CHud::VidInit( void )
 		m_pSpriteList = NULL;
 		
 		gEngfuncs.Con_Printf( "WARNING: hud.txt missing or empty, HUD disabled.\n" );
-		
-		// Initialize HUD elements to safe states to prevent crashes
-		m_Ammo.Init();
-		m_Health.Init();
-		// ... other inits if necessary, but mostly VidInit calls are deferred or safe
 		return;
 	}
 	if( pSpriteList )

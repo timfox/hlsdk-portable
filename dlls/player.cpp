@@ -4134,22 +4134,10 @@ reflecting all of the HUD state info.
 void CBasePlayer::UpdateClientData( void )
 {
 #if XASH_GAMECUBE
+	/* The HUD's messages (health, battery, weapons, ammo, damage, train,
+	 * FOV, HideWeapon) are sent on every route, as in retail: the client
+	 * HUD is the full retail one on the New Game routes too. */
 	BOOL gcTraceNativeHUD = m_fInitHUD && g_engfuncs.CheckParm( (char *)"-gcfullphysics", NULL );
-
-	/* New Game bring-up: full UpdateClientData (weapon/HUD msgs, status bar)
-	 * stalls Host_ServerFrame after G36. Clear init once, then no-op. */
-	if( ( g_engfuncs.CheckParm( (char *)"-gcnewgame", NULL )
-		|| g_engfuncs.CheckParm( (char *)"-gcmenuplaystart", NULL ) )
-		&& !g_engfuncs.CheckParm( (char *)"-gcfullphysics", NULL ) )
-	{
-		if( m_fInitHUD )
-		{
-			m_fInitHUD = FALSE;
-			gInitHUD = FALSE;
-			ALERT( at_aiconsole, "*GameCube: skipped UpdateClientData for newgame\n" );
-		}
-		return;
-	}
 #endif
 	if( m_fInitHUD )
 	{
