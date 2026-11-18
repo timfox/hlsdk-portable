@@ -759,6 +759,10 @@ Vector CLCFisherman::PlayerPos( void )
 }
 
 #if XASH_GAMECUBE
+extern "C" void GC_ActorPose( int ent, const char *name, float cycle ) __attribute__(( weak ));
+#endif
+
+#if XASH_GAMECUBE
 // The game code and the renderer are one binary on GameCube: gestures go
 // straight to the engine's table (engine/platform/gamecube/actor_gesture.c),
 // which the renderer reads when it poses him.
@@ -900,8 +904,24 @@ void CLCFisherman::UpdateLook( float interval )
 		float dlo = m_lookRange[i][2], dhi = m_lookRange[i][3];
 
 		m_look[i] = LC_Approach( want[i], m_look[i], 120.0f * interval );
-		if( hi > lo )
-			SetBoneController( i, dlo + ( m_look[i] - lo ) / ( hi - lo ) * ( dhi - dlo ));
+		(void)dlo;
+		(void)dhi;
+#if XASH_GAMECUBE
+		// Each look pose is a blend of whole delta poses (head, spine, coat).
+		// A bone controller adds to one Euler angle and turned him about the
+		// wrong axis, so the pose goes to the renderer's layer instead.
+		static const char *const pose[4] = { "look_head_yaw", "look_head_pitch", "look_spine_yaw", "look_body_yaw" };
+
+		if( hi > lo && i < 4 && GC_ActorPose )
+		{
+			// The yaw poses run from a left turn at their low end to a right
+			// turn at their high end (measured on the baked poses); m_look
+			// is the turn to the left. Pitch runs down to up as m_look does.
+			float c = ( m_look[i] - lo ) / ( hi - lo );
+
+			GC_ActorPose( ENTINDEX( edict()), pose[i], i == 1 ? c : 1.0f - c );
+		}
+#endif
 	}
 }
 
