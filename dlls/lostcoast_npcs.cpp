@@ -308,11 +308,14 @@ typedef struct
 {
 	char	type;
 	char	started;
-	float	t0, t1;
-	float	a, b;		// speak: volume, attenuation; moveto: distance
-	char	arg[52];	// the longest voice path is 48 characters
 	unsigned char	ntags;	// gesture: timing tags, (event, sequence) fractions * 255
 	unsigned char	tags[8];
+	float	t0, t1;
+	float	a, b;		// speak: volume, attenuation; moveto: distance
+	// speak: the wave; gesture: the sequence. In the engine's string pool:
+	// eight scenes of forty events with the name inline were 27 KB of the
+	// GameCube's last free memory, and the intro stopped loading.
+	const char	*arg;
 } lc_event_t;
 
 typedef struct
@@ -415,10 +418,10 @@ static lc_scene_t *LC_LoadScene( const char *file )
 		ev->t1 = t1;
 		ev->a = a;
 		ev->b = b;
-		strncpy( ev->arg, arg, sizeof( ev->arg ) - 1 );
+		ev->arg = ( ev->type == LCE_SPEAK || ev->type == LCE_GESTURE ) ? STRING( ALLOC_STRING( arg )) : "";
 		sc->n++;
 		if( ev->type == LCE_SPEAK )
-			PRECACHE_SOUND( (char *)STRING( ALLOC_STRING( ev->arg )));
+			PRECACHE_SOUND( (char *)ev->arg );
 	}
 	FREE_FILE( data );
 	return sc;
