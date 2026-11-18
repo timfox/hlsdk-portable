@@ -695,7 +695,14 @@ void CLCFisherman::Spawn( void )
 		m_flRetrieveDist = 96;
 	if( !FStringNull( m_iszNodes ))
 		LC_LoadNodes( STRING( m_iszNodes ));
-	SetSeq( "idle" );
+	// The map spawns him already on "idle", so SetSeq would see no change
+	// and leave the frame rate at zero: he stood frozen on frame 0.
+	pev->sequence = LookupSequence( "idle" );
+	if( pev->sequence < 0 )
+		pev->sequence = 0;
+	pev->frame = 0;
+	pev->framerate = 1.0f;
+	ResetSequenceInfo();
 	InitBoneControllers();
 	m_flTest = LC_BootSwitch( "lcscenetest" ) ? gpGlobals->time + 3.0f : 0.0f;
 	SetThink( &CLCFisherman::FishThink );
