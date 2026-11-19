@@ -2621,14 +2621,18 @@ void CBasePlayer::PostThink()
 {
 #if defined(__GAMECUBE__)
 	/* Lean Pure Flipper: full PostThink (fall/tank/…) hung Host_Frame on
-	 * c0a0. Keep weapon ItemPostFrame so PrimaryAttack / UTIL_TraceLine run. */
+	 * c0a0. Keep weapon ItemPostFrame so PrimaryAttack / UTIL_TraceLine run,
+	 * then finish at pt_end as retail does: with CLIENT_WEAPONS that is where
+	 * m_flNextAttack and the weapon timers count down. Returning before it
+	 * left m_flNextAttack above zero after the first weapon deploy, and
+	 * ItemPostFrame then never reached ImpulseCommands (flashlight, spray). */
 	if( ( g_engfuncs.CheckParm( (char *)"-gcnewgame", NULL )
 		|| g_engfuncs.CheckParm( (char *)"-gcmenuplaystart", NULL ) )
 		&& !g_engfuncs.CheckParm( (char *)"-gcfullphysics", NULL ))
 	{
 		if( !g_fGameOver && IsAlive() )
 			ItemPostFrame();
-		return;
+		goto pt_end;
 	}
 #endif
 	if( g_fGameOver )
