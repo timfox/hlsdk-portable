@@ -131,6 +131,20 @@ void CEnvModel::Spawn( void )
 	pev->solid = SOLID_NOT;
 	pev->takedamage = DAMAGE_NO;
 
+	/* Retail CEnvModel::Spawn (dod.so): spawnflag 2 lifts the prop one unit
+	 * and drops it onto the floor. dod_object is its own class there and
+	 * never drops. Props without a targetname are drawn from the baked prop
+	 * pack, which applies the same drop; the ones with a targetname spawn
+	 * here and used to stay at their map height (12 of them on dod_charlie
+	 * hung 16 to 36 units above the ground). The drop does not need the
+	 * model, so it comes before the model cap below. */
+	if( FBitSet( pev->spawnflags, 2 ) && FClassnameIs( pev, "env_model" ) )
+	{
+		pev->origin.z += 1.0f;
+		UTIL_SetOrigin( pev, pev->origin );
+		DROP_TO_FLOOR( ENT( pev ) );
+	}
+
 	if( FStringNull( pev->model ) )
 		return;
 
