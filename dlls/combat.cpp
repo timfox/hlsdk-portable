@@ -37,6 +37,10 @@ extern DLL_GLOBAL int			g_iSkillLevel;
 extern Vector VecBModelOrigin( entvars_t *pevBModel );
 extern entvars_t *g_pevLastInflictor;
 
+// DoD (dod-gc src/dod_runtime.cpp): the side's own gib model and the live gib budget.
+extern const char *DodGC_GibModel( entvars_t *pevVictim );
+extern int DodGC_GibsAllowed( int wanted );
+
 #define GERMAN_GIB_COUNT		4
 #define	HUMAN_GIB_COUNT			6
 #define ALIEN_GIB_COUNT			4
@@ -118,9 +122,13 @@ void CGib::SpawnStickyGibs( entvars_t *pevVictim, Vector vecOrigin, int cGibs )
 
 void CGib::SpawnHeadGib( entvars_t *pevVictim )
 {
-	CGib *pGib = GetClassPtr( (CGib *)NULL );
+	if( DodGC_GibsAllowed( 1 ) < 1 )
+		return;	// over the live gib budget
 
-	pGib->Spawn( "models/hgibs.mdl" );// throw one head
+	CGib *pGib = GetClassPtr( (CGib *)NULL );
+	const char *teamGib = DodGC_GibModel( pevVictim );
+
+	pGib->Spawn( teamGib ? teamGib : "models/hgibs.mdl" );// throw one head
 	pGib->pev->body = 0;
 
 	if( pevVictim )
@@ -168,12 +176,22 @@ void CGib::SpawnHeadGib( entvars_t *pevVictim )
 void CGib::SpawnRandomGibs( entvars_t *pevVictim, int cGibs, int human )
 {
 	int cSplat;
+	const char *teamGib = human ? DodGC_GibModel( pevVictim ) : NULL;
+
+	if( human )
+		cGibs = DodGC_GibsAllowed( cGibs );	// the live gib budget floats with frame time and free edicts
 
 	for( cSplat = 0; cSplat < cGibs; cSplat++ )
 	{
 		CGib *pGib = GetClassPtr( (CGib *)NULL );
 
-		if( human )
+		if( human && teamGib )
+		{
+			// the side's own pieces (allied_gibs/axis_gibs: three bodies)
+			pGib->Spawn( teamGib );
+			pGib->pev->body = RANDOM_LONG( 0, 2 );
+		}
+		else if( human )
 		{
 			// human pieces
 			pGib->Spawn( "models/hgibs.mdl" );
