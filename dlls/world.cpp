@@ -467,6 +467,8 @@ void CWorld::Spawn( void )
 	Precache();
 }
 
+extern void DodGC_PrecacheGibs( void );
+
 void CWorld::Precache( void )
 {
 	g_pLastSpawn = NULL;
@@ -557,6 +559,7 @@ void CWorld::Precache( void )
 	
 	PRECACHE_MODEL( "models/hgibs.mdl" );
 	PRECACHE_MODEL( "models/agibs.mdl" );
+	DodGC_PrecacheGibs();	// the side's own gib models, when the disc has them (dod-gc src/dod_runtime.cpp)
 
 	PRECACHE_SOUND( "weapons/ric1.wav" );
 	PRECACHE_SOUND( "weapons/ric2.wav" );
